@@ -5,7 +5,7 @@ import random
 import os
 import sys
 
-# perintah compile: pyinstaller --name WaveRiderNusantara --windowed --add-data "bima.png;."  --add-data "batik.png;." main.py
+# perintah compile: pyinstaller --name WaveRiderNusantara --onefile --windowed --add-data "bima.png;."  --add-data "batik.png;." main.py
 
 # --- Tambahkan ini untuk menemukan direktori skrip ---
 # script_dir = os.path.dirname(os.path.abspath(__file__))
