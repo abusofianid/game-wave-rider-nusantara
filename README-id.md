@@ -19,6 +19,16 @@ Proyek ini mendemonstrasikan prinsip-prinsip pengembangan game inti, mengubah ko
 
 ---
 
+### 📌 Cara Menjalankan
+1.  **Penyiapan Lingkungan:** Pastikan Anda telah menginstal Python dependencies (listed in **requirements.txt**):
+`pip install -r requirements.txt`
+2.  **Kompilasi (Sekali Saja):** Gunakan perintah lengkap PyInstaller untuk membuat `.exe` (pastikan terminal berada di folder utama proyek):
+    `pyinstaller --name WaveRiderNusantara --onefile --windowed --add-data "assets;assets" main.py`
+
+Anda sekarang dapat **menjalankan `.exe` yang sudah jadi** dari folder **`dist/`** atau menjalankan langsung file **`main.py`** Anda.
+
+---
+
 ### ⚙️ Metodologi (Prinsip Pengembangan Game)
 1.  **Penanganan Resource & Deployment**: Fungsi pembantu khusus (*custom helper*) memastikan aset (*images*, *audio*) dimuat dengan benar, baik dalam mode pengembangan maupun setelah kompilasi via **PyInstaller** (`.exe`).
 2.  **Manajemen Status Game**: Menerapkan peralihan status yang andal (MENU, PLAYING, PAUSED, GAME_OVER) untuk mengontrol alur pengguna dan *rendering*.
@@ -60,16 +70,6 @@ Proyek ini mendemonstrasikan prinsip-prinsip pengembangan game inti, mengubah ko
 | **Pengembangan** (Skrip) | Folder proyek (`main.py`) | `python main.py` | Membutuhkan instalasi Pyglet (`pip install pyglet`). |
 | **Deployment** (Hasil Kompilasi) | Folder `dist/` | **Klik dua kali** file `WaveRiderNusantara.exe` | Membutuhkan kompilasi awal dengan PyInstaller. |
 
----
-
-### 📌 Cara Menjalankan
-
-1.  **Penyiapan Lingkungan:** Pastikan Anda telah menginstal Pyglet:
-    `pip install pyglet`
-2.  **Kompilasi (Sekali Saja):** Gunakan perintah lengkap PyInstaller untuk membuat `.exe` (pastikan terminal berada di folder utama proyek):
-    `pyinstaller --name WaveRiderNusantara --onefile --windowed --add-data "assets;assets" main.py`
-
-Anda sekarang dapat **menjalankan `.exe` yang sudah jadi** dari folder **`dist/`** atau menjalankan langsung file **`main.py`** Anda.
 
 ---
 
