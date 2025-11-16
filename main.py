@@ -7,31 +7,22 @@ import sys
 
 # perintah compile: pyinstaller --name WaveRiderNusantara --onefile --windowed --add-data "assets;assets" main.py
 
-# --- Tambahkan ini untuk menemukan direktori skrip ---
-# script_dir = os.path.dirname(os.path.abspath(__file__))
-
-# Helper function to load image or fallback to shape
+# --- pengaturan path
 
 
 def resource_path_helper(relative_path):
-    """ Mendapatkan path absolut ke resource, berfungsi untuk mode dev dan PyInstaller """
     try:
-        # PyInstaller membuat folder temp dan menyimpan path di _MEIPASS
         base_path = sys._MEIPASS
     except Exception:
         # _MEIPASS tidak di-set, jadi kita dalam mode pengembangan (dev)
         base_path = os.path.abspath(os.path.dirname(__file__))
-
     return os.path.join(base_path, relative_path)
-
-# batas
 
 
 def load_resource(filename, shape_func=None, *args, **kwargs):
     # Buat path absolut ke file resource MENGGUNAKAN HELPER
     resource_path = resource_path_helper(filename)
     try:
-        # Coba muat sebagai gambar terlebih dahulu
         return pyglet.sprite.Sprite(pyglet.image.load(resource_path))
     except Exception as e:
         # Jika gagal (bukan gambar atau tidak ditemukan) dan ada fungsi fallback
@@ -43,8 +34,6 @@ def load_resource(filename, shape_func=None, *args, **kwargs):
         else:
             # Kembalikan path untuk pyglet.media.load
             return pyglet.media.load(resource_path)
-
-# Helper to get bounding box for any game object (Player, Obstacle, Collectible)
 
 
 def get_item_bbox(item):
@@ -61,60 +50,28 @@ def get_item_bbox(item):
         return (item.x, item.x + item.width, item.y, item.y + item.height)
     return (0, 0, 0, 0)
 
-# Helper to check if two bounding boxes overlap
-
 
 def boxes_overlap(box1, box2):
     l1, r1, b1, t1 = box1
     l2, r2, b2, t2 = box2
     return l1 < r2 and r1 > l2 and b1 < t2 and t1 > b2
 
-# --- Inisialisasi Variabel Global ---
-
-
-# pengaturan font kustom
-try:
-    font_path = resource_path_helper(
-        'assets/fonts/OpenSans-SemiBold.ttf')
-    pyglet.font.add_file(font_path)
-    # Gunakan nama font yang dikonfirmasi
-    CUSTOM_FONT_NAME = 'Open Sans'
-except Exception as e:
-    # Biarkan ini di sini agar label tetap berfungsi (menggunakan default)
-    print(f"Gagal memuat font: {e}. Menggunakan font default.")
-    CUSTOM_FONT_NAME = None
 
 # Pengaturan Window
 window = pyglet.window.Window(800, 600, "Wave Rider Nusantara")
-window.set_caption(
-    "Wave Rider Nusantara - Created by Abu Sofian")
+window.set_caption("Wave Rider Nusantara - Created by Abu Sofian")
 
 
 # ubah cursor di tombol bahasa
 hand_cursor = window.get_system_mouse_cursor(window.CURSOR_HAND)
 default_cursor = window.get_system_mouse_cursor(window.CURSOR_DEFAULT)
 
-# Penanganan status tombol manual
-keys = {}
 
 # Game speed multiplier (increases over time)
 game_speed_multiplier = 1.0
 BASE_GAME_SPEED = 200  # Kecepatan dasar obstacle/collectible
 PLAYER_BASE_SPEED = 5  # Kecepatan dasar player
 
-# Pilihan Bahasa (0: English, 1: Indonesian)
-language = 0
-texts = {
-    "title": ["Wave Rider Nusantara", "Penunggang Gelombang Nusantara"],
-    "start": ["Please select a language", "Silakan pilih bahasa"],
-    # "lang_select" dihapus karena kita menggunakan tombol terpisah
-    "score": ["Score: ", "Skor: "],
-    "lives": ["Lives: ", "Nyawa: "],
-    "game_over": ["Game Over! Press R to Restart", "Permainan Berakhir! Tekan R untuk Mulai Ulang"],
-    "pause": ["Paused - Press P to Resume", "Jeda - Tekan P untuk Lanjut"],
-    "instructions": ["Press SPACE to Start. Use ARROW KEYS to move. Press the P key to Pause", "Tekan SPASI untuk Mulai. Gunakan TOMBOL PANAH untuk bergerak. Tekan Tombol P untuk Jeda"],
-    "capture_avoid_instructions": ["Help Gatotkaca catch Batik Patterns, Avoid BOMBS!", "Bantu Gatotkaca menangkap Pola Batik, Hindari BOM!"]
-}
 
 # Status Game
 MENU = 0
@@ -123,10 +80,10 @@ PAUSED = 2
 GAME_OVER = 3
 state = MENU
 
+# Penanganan status tombol manual
+keys = {}
 # Dictionary untuk menyimpan koordinat tombol yang bisa diklik
 button_rects = {}
-
-# Player class (Character: gatotkaca)
 
 
 # Player class (Character: gatotkaca)
@@ -150,12 +107,11 @@ class Player:
 
         try:
             # --- 3. Muat SEMUA gambar player ---
-            img1_path = resource_path_helper('assets/images/gatot-1.png')
-            img2_path = resource_path_helper('assets/images/gatot-2.png')
-            img_hit_path = resource_path_helper('assets/images/gatot-hit.png')
-            # Perhatikan ejaan: 'gatot-colect.png' sesuai nama file
+            img1_path = resource_path_helper('assets/images/gatot_1.png')
+            img2_path = resource_path_helper('assets/images/gatot_2.png')
+            img_hit_path = resource_path_helper('assets/images/gatot_hit.png')
             img_collect_path = resource_path_helper(
-                'assets/images/gatot-collect.png')
+                'assets/images/gatot_collect.png')
 
             image_1 = pyglet.image.load(img1_path)
             image_2 = pyglet.image.load(img2_path)
@@ -201,15 +157,15 @@ class Player:
 
         # Logika gerakan (movement)
         global game_speed_multiplier
-        current_player_speed = PLAYER_BASE_SPEED * game_speed_multiplier
+
         if keys.get(key.LEFT, False):
-            self.x -= current_player_speed
+            self.x -= PLAYER_BASE_SPEED
         if keys.get(key.RIGHT, False):
-            self.x += current_player_speed
+            self.x += PLAYER_BASE_SPEED
         if keys.get(key.UP, False):
-            self.y += current_player_speed
+            self.y += PLAYER_BASE_SPEED
         if keys.get(key.DOWN, False):
-            self.y -= current_player_speed
+            self.y -= PLAYER_BASE_SPEED
 
         # Batas layar
         if self.x < 0:
@@ -305,7 +261,7 @@ class Collectible:
         self.y = y_pos if y_pos is not None else (
             window.height / 2 + random.randint(-200, 200))
         self.type = item_type if item_type is not None else random.choice(
-            ['collect-1', 'collect-2', 'collect-3', 'collect-4'])
+            ['collect_1', 'collect_2', 'collect_3', 'collect_4'])
 
         # --- 1. Ukuran Acak ---
         # Ukuran acak antara 25 s/d 45 piksel
@@ -349,14 +305,24 @@ class Collectible:
     # -----------------------------------
 
 
-# Game objects
+# --- inisialisasi asset ---
+# assets font
+try:
+    font_path = resource_path_helper('assets/fonts/OpenSans-SemiBold.ttf')
+    pyglet.font.add_file(font_path)
+    # Gunakan nama font yang dikonfirmasi
+    CUSTOM_FONT_NAME = 'Open Sans'
+except Exception as e:
+    # Biarkan ini di sini agar label tetap berfungsi (menggunakan default)
+    print(f"Gagal memuat font: {e}. Menggunakan font default.")
+    CUSTOM_FONT_NAME = None
+# asset background
 player = Player()
 obstacles = []
 collectibles = []
-background = load_resource('assets/images/bg.png', shapes.Rectangle, 0, 0, 800, 600, color=(
-    100, 150, 200))
-
-# Audio
+background = load_resource(
+    'assets/images/bg.png', shapes.Rectangle, 0, 0, 800, 600, color=(100, 150, 200))
+# asset audio
 try:
     music = load_resource('assets/audio/bg-sound.wav')
     music_player = pyglet.media.Player()
@@ -367,11 +333,24 @@ try:
 except FileNotFoundError:
     print("Audio file 'gamelan.wav' not found. Playing without music.")
 
-# Labels
+#  --- inisialisasi labels ---
+# data teks
+language = 0
+texts = {
+    "title": ["Wave Rider Nusantara", "Penunggang Gelombang Nusantara"],
+    "start": ["Please select a language", "Silakan pilih bahasa"],
+    "score": ["Score: ", "Skor: "],
+    "lives": ["Lives: ", "Nyawa: "],
+    "game_over": ["Game Over! Press R to Restart", "Permainan Berakhir! Tekan R untuk Mulai Ulang"],
+    "pause": ["Paused - Press P to Resume", "Jeda - Tekan P untuk Lanjut"],
+    "instructions": ["Press SPACE to Start. Use ARROW KEYS to move. Press the P key to Pause", "Tekan SPASI untuk Mulai. Gunakan TOMBOL PANAH untuk bergerak. Tekan Tombol P untuk Jeda"],
+    "capture_avoid_instructions": ["Help Gatotkaca catch Batik Patterns, Avoid BOMBS!", "Bantu Gatotkaca menangkap Pola Batik, Hindari BOM!"]
+}
+# pengaturan teks
 title_label = pyglet.text.Label(
     texts["title"][language], font_name=CUSTOM_FONT_NAME, font_size=22, x=400, y=550, anchor_x='center', anchor_y='center', color=(0, 0, 0, 255))
 start_label = pyglet.text.Label(
-    texts["start"][language], font_name=CUSTOM_FONT_NAME, font_size=16, x=400, y=460, anchor_x='center', anchor_y='center', color=(0, 0, 0, 255))
+    texts["start"][language], font_name=CUSTOM_FONT_NAME, font_size=16, x=400, y=480, anchor_x='center', anchor_y='center', color=(0, 0, 0, 255))
 score_label = pyglet.text.Label(
     "", font_size=18, font_name=CUSTOM_FONT_NAME, x=15, y=550, anchor_x='left', anchor_y='bottom', color=(0, 0, 0, 255))
 lives_label = pyglet.text.Label(
@@ -384,27 +363,21 @@ instructions_label = pyglet.text.Label(
     texts["instructions"][language], font_size=12, font_name=CUSTOM_FONT_NAME, x=400, y=40, anchor_x='center', anchor_y='center', color=(0, 0, 0, 255))
 capture_avoid_label = pyglet.text.Label(
     texts["capture_avoid_instructions"][language], font_name=CUSTOM_FONT_NAME, font_size=12, x=400, y=80, anchor_x='center', anchor_y='center', color=(0, 0, 0, 255))
-
-# --- PERUBAHAN 1: Buat dua label tombol baru ---
 lang_button_en = pyglet.text.Label(
-    "English", font_size=12, font_name=CUSTOM_FONT_NAME, x=370, y=420,
+    "English", font_size=12, font_name=CUSTOM_FONT_NAME, x=380, y=440,
     anchor_x='right', anchor_y='center', color=(0, 0, 0, 255)
 )
 lang_button_id = pyglet.text.Label(
-    "Indonesia", font_size=12, font_name=CUSTOM_FONT_NAME, x=410, y=420,
+    "Indonesia", font_size=12, font_name=CUSTOM_FONT_NAME, x=410, y=440,
     anchor_x='left', anchor_y='center', color=(0, 0, 0, 255)
 )
-# ---
 
-# Constants for background rectangles
+
 BG_RECT_PADDING = 5
 BG_RECT_COLOR = (255, 255, 255, 200)
-# --- PERUBAHAN 2: Tentukan warna tombol kuning ---
-BUTTON_COLOR = (255, 255, 0, 200)  # Kuning dengan transparansi
-# ---
 
 
-# Helper function untuk menggambar latar belakang (sudah bisa menerima warna)
+# membuat shading teks
 def draw_background_for_label(label, padding=BG_RECT_PADDING, color=BG_RECT_COLOR, radius=6, store_rect_as=None):
     global button_rects
     if not label.text:
@@ -432,7 +405,7 @@ def draw_background_for_label(label, padding=BG_RECT_PADDING, color=BG_RECT_COLO
         rect_x, rect_y, rect_width, rect_height, radius=radius, color=color).draw()
 
 
-# --- PERUBAHAN 3: Buat helper function untuk mengubah bahasa ---
+# membuat pergantian bahasa
 def set_language(lang_id):
     global language
     language = lang_id
@@ -440,11 +413,9 @@ def set_language(lang_id):
     start_label.text = texts["start"][language]
     instructions_label.text = texts["instructions"][language]
     capture_avoid_label.text = texts["capture_avoid_instructions"][language]
-# ---
 
 
-# Update function
-# Update function
+# function update didalam game
 def update(dt):
     global state, obstacles, collectibles, game_speed_multiplier
 
@@ -520,7 +491,7 @@ def update(dt):
             new_collectible_x = 850
             new_collectible_y = window.height / 2 + random.randint(-200, 200)
             new_collectible_type = random.choice(
-                ['collect-1', 'collect-2', 'collect-3', 'collect-4'])
+                ['collect_1', 'collect_2', 'collect_3', 'collect_4'])
             # Ukuran 20x20 ini juga untuk cek spawn overlap
             proposed_col_bbox = (new_collectible_x, new_collectible_x + 20,
                                  new_collectible_y, new_collectible_y + 20)
@@ -533,8 +504,6 @@ def update(dt):
                 collectibles.append(Collectible(
                     new_collectible_x, y_pos=new_collectible_y, item_type=new_collectible_type))
 
-# Draw function
-
 
 @window.event
 def on_draw():
@@ -543,19 +512,18 @@ def on_draw():
 
     if state == PLAYING:
         player.draw()
+        score_label.text = texts["score"][language] + str(player.score)
+        draw_background_for_label(score_label)
+        score_label.draw()
+
+        lives_label.text = texts["lives"][language] + str(player.lives)
+        draw_background_for_label(lives_label)
+        lives_label.draw()
 
     for obs in obstacles:
         obs.draw()
     for col in collectibles:
         col.draw()
-
-    score_label.text = texts["score"][language] + str(player.score)
-    draw_background_for_label(score_label)
-    score_label.draw()
-
-    lives_label.text = texts["lives"][language] + str(player.lives)
-    draw_background_for_label(lives_label)
-    lives_label.draw()
 
     if state == MENU:
         draw_background_for_label(title_label)
@@ -566,12 +534,12 @@ def on_draw():
         # --- PERUBAHAN 4: Gambar dua tombol baru dengan warna kuning ---
         # Gambar tombol English
         draw_background_for_label(
-            lang_button_en, store_rect_as='btn_en', color=BUTTON_COLOR)
+            lang_button_en, store_rect_as='btn_en', color=BG_RECT_COLOR)
         lang_button_en.draw()
 
         # Gambar tombol Indonesia
         draw_background_for_label(
-            lang_button_id, store_rect_as='btn_id', color=BUTTON_COLOR)
+            lang_button_id, store_rect_as='btn_id', color=BG_RECT_COLOR)
         lang_button_id.draw()
         # ---
 
