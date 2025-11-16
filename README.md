@@ -19,16 +19,6 @@ This project demonstrates core game development principles, transforming static 
 
 ---
 
-### 📌 How to Run
-1.  **Environment Setup:** Install necessary Python dependencies (listed in **requirements.txt**):
-    `pip install -r requirements.txt`
-2.  **Compilation (One-time):** Use the complete PyInstaller command to create the `.exe` (ensure the terminal is in the main project folder):
-    `pyinstaller --name WaveRiderNusantara --onefile --windowed --add-data "assets;assets" main.py`
-
-You can now **run the ready `.exe`** from the **`dist/`** folder or run the **`main.py`** file directly.
-
----
-
 ### ⚙️ Methodology (Game Dev Principles)
 1.  **Resource Handling & Deployment**: Custom helper functions (`resource_path_helper`) to ensure image and audio assets are loaded correctly, both in development mode and after compilation via **PyInstaller** (`.exe`).
 2.  **Game State Management**: Implementing reliable state switching (MENU, PLAYING, PAUSED, GAME_OVER) to control user flow and rendering.
@@ -69,6 +59,17 @@ You can now **run the ready `.exe`** from the **`dist/`** folder or run the **`m
 | :--- | :--- | :--- | :--- |
 | **Development** (Script) | Project folder (`main.py`) | `python main.py` | Install dependencies using: `pip install -r requirements.txt`. |
 | **Deployment** (Compiled) | `dist/` folder | **Double-click** the `WaveRiderNusantara.exe` file | Requires prior compilation with PyInstaller. |
+
+---
+
+### 📌 How to Run
+
+1.  **Environment Setup:** Install necessary Python dependencies (listed in **requirements.txt**):
+    `pip install -r requirements.txt`
+2.  **Compilation (One-time):** Use the complete PyInstaller command to create the `.exe` (ensure the terminal is in the main project folder):
+    `pyinstaller --name WaveRiderNusantara --onefile --windowed --add-data "assets;assets" main.py`
+
+You can now **run the ready `.exe`** from the **`dist/`** folder or run the **`main.py`** file directly.
 
 ---
 
