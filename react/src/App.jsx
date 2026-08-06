@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useGameWindow } from './useGameWindow';
 
 // ==========================================================
@@ -27,15 +27,10 @@ const BASE_GAME_SPEED = 200;
 const PLAYER_BASE_SPEED = 300;
 const PLAYER_TARGET_SIZE = 70;
 const STATE_DURATION = 0.3;
-const MIN_SPAWN_DISTANCE = 100;
-
-// ==========================================================
-// ## ⚛️ KOMPONEN UTAMA
-// ==========================================================
+const MIN_SPAWN_DISTANCE = 120;
 
 const WaveRiderGame = () => {
   const windowSize = useGameWindow();
-
   const [gameState, setGameState] = useState('MENU');
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
@@ -50,20 +45,17 @@ const WaveRiderGame = () => {
   const playerRef = useRef({
     x: 100, y: 300,
     width: PLAYER_TARGET_SIZE, height: PLAYER_TARGET_SIZE,
-    isChangingState: false, stateTimer: 0.0, spriteKey: 'idle1', animationTimer: 0.0
+    isChangingState: false, stateTimer: 0.0, spriteKey: 'gatot-1', animationTimer: 0.0
   });
 
   const obstaclesRef = useRef([]);
   const collectiblesRef = useRef([]);
   const keysPressed = useRef({});
   const speedMultiplier = useRef(1.0);
-
-  const imagesRef = useRef({
-    bg: null, bomb: null, collect: [], 'gatot-1': null, 'gatot-2': null, 'gatot-hit': null, 'gatot-collect': null
-  });
+  const imagesRef = useRef({ collect: [] });
 
   // ==========================================================
-  // ## 🏞️ LOADING ASSETS
+  // ## 🏞️ OPTIMIZED ASSET LOADING
   // ==========================================================
 
   useEffect(() => {
@@ -72,401 +64,290 @@ const WaveRiderGame = () => {
       'gatot-hit': '/assets/images/gatot-hit.png', 'gatot-collect': '/assets/images/gatot-collect.png',
       'bomb': '/assets/images/bomb.png', 'bg': '/assets/images/bg.png',
     };
-    for (let i = 1; i <= 4; i++) {
-      imageSources[`collect-${i}`] = `/assets/images/collect-${i}.png`;
-    }
+    for (let i = 0; i <= 3; i++) { imageSources[`collect-${i}`] = `/assets/images/collect-${i+1}.png`; }
 
     let loadedCount = 0;
     const totalImages = Object.keys(imageSources).length;
 
-    Object.keys(imageSources).forEach(key => {
+    Object.entries(imageSources).forEach(([key, src]) => {
       const img = new Image();
-      img.src = imageSources[key];
+      img.src = src;
       img.onload = () => {
         if (key.startsWith('collect-')) {
-          const index = parseInt(key.split('-')[1]) - 1;
-          imagesRef.current.collect[index] = img;
+          const idx = parseInt(key.split('-')[1]);
+          imagesRef.current.collect[idx] = img;
         } else {
           imagesRef.current[key] = img;
         }
         loadedCount++;
-
         if (loadedCount === totalImages) {
-          const gatotImage = imagesRef.current['gatot-1'];
-          if (gatotImage) {
-            const originalWidth = gatotImage.width;
-            const originalHeight = gatotImage.height;
-            const scale_x = PLAYER_TARGET_SIZE / originalWidth;
-            const scale_y = PLAYER_TARGET_SIZE / originalHeight;
-            const scale = Math.min(scale_x, scale_y);
-
-            playerRef.current.width = originalWidth * scale;
-            playerRef.current.height = originalHeight * scale;
+          const gatot = imagesRef.current['gatot-1'];
+          if (gatot) {
+            const scale = Math.min(PLAYER_TARGET_SIZE / gatot.width, PLAYER_TARGET_SIZE / gatot.height);
+            playerRef.current.width = gatot.width * scale;
+            playerRef.current.height = gatot.height * scale;
           }
           setImagesLoaded(true);
         }
       };
-      img.onerror = () => {
-        console.error(`Gagal memuat: ${imageSources[key]}`);
-        loadedCount++;
-        if (loadedCount === totalImages) setImagesLoaded(true);
-      };
     });
 
-    return () => cancelAnimationFrame(requestRef.current);
-  }, []);
-
-  // --- Audio Init ---
-  useEffect(() => {
     const bgMusic = new Audio('/assets/audio/bg-sound.wav');
     bgMusic.loop = true;
     bgMusic.volume = 0.05;
     audioRef.current = bgMusic;
 
-    const playAudio = () => {
-      if (bgMusic.paused) {
-        bgMusic.play().catch(e => console.log("Audio autoplay blocked", e));
-      }
-      window.removeEventListener('click', playAudio);
-      window.removeEventListener('keydown', playAudio);
-    };
-    window.addEventListener('click', playAudio);
-    window.addEventListener('keydown', playAudio);
     return () => {
-      window.removeEventListener('click', playAudio);
-      window.removeEventListener('keydown', playAudio);
+      cancelAnimationFrame(requestRef.current);
+      bgMusic.pause();
     };
   }, []);
 
   // ==========================================================
-  // ## 🖱️ INPUT HANDLERS
+  // ## 🔄 GAME LOGIC (OPTIMIZED LOOP)
   // ==========================================================
 
-  const keyMap = { 'btn-up': 'ArrowUp', 'btn-down': 'ArrowDown', 'btn-left': 'ArrowLeft', 'btn-right': 'ArrowRight' };
-
-  const handleTouchStart = (code) => (e) => {
-    if (e.cancelable) e.preventDefault();
-    if (gameState === 'PLAYING') keysPressed.current[keyMap[code]] = true;
-  };
-
-  const handleTouchEnd = (code) => (e) => {
-    if (e.cancelable) e.preventDefault();
-    keysPressed.current[keyMap[code]] = false;
-  };
-
-  const handleAction = (actionType) => (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    if (actionType === 'start') startGame();
-    else if (actionType === 'pause') {
-      if (gameState === 'PLAYING') setGameState('PAUSED');
-      else if (gameState === 'PAUSED') {
-        lastTimeRef.current = performance.now();
-        setGameState('PLAYING');
-      }
-    } else if (actionType === 'restart') resetGame();
-  };
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
-      keysPressed.current[e.code] = true;
-      if (e.code === 'Space' && gameState === 'MENU' && imagesLoaded) startGame();
-      if (e.code === 'KeyP') handleAction('pause')(e);
-      if (e.code === 'KeyR' && gameState === 'GAMEOVER') resetGame();
-    };
-    const handleKeyUp = (e) => keysPressed.current[e.code] = false;
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [gameState, imagesLoaded]);
-
-  const startGame = () => {
+  const startGame = useCallback(() => {
+    if (audioRef.current) audioRef.current.play().catch(() => {});
     setGameState('PLAYING');
     lastTimeRef.current = performance.now();
-  };
+  }, []);
 
-  const resetGame = () => {
-    const { width, height } = playerRef.current;
-    playerRef.current = {
-      x: 100, y: 300, width, height,
-      isChangingState: false, stateTimer: 0.0, spriteKey: 'idle1', animationTimer: 0.0
-    };
+  const resetGame = useCallback(() => {
+    playerRef.current = { ...playerRef.current, x: 100, y: 300, isChangingState: false, stateTimer: 0.0, spriteKey: 'gatot-1' };
     obstaclesRef.current = [];
     collectiblesRef.current = [];
     speedMultiplier.current = 1.0;
     setScore(0);
     setLives(3);
     setGameState('MENU');
-  };
-
-  // ==========================================================
-  // ## 🔄 GAME LOGIC & DRAW
-  // ==========================================================
-
-  const checkCollision = (r1, r2) => r1.x < r2.x + r2.width && r1.x + r1.width > r2.x && r1.y < r2.y + r2.height && r1.y + r1.height > r2.y;
-
-  const changePlayerState = (p, type) => {
-    if (p.isChangingState) return;
-    p.isChangingState = true;
-    p.stateTimer = STATE_DURATION;
-    p.spriteKey = type === 'hit' ? 'hit' : 'collect';
-  };
-
-  const isOverlapping = (newBox, items) => items.some(i => Math.abs((newBox.x + newBox.width / 2) - (i.x + i.width / 2)) < MIN_SPAWN_DISTANCE);
+  }, []);
 
   const update = (time) => {
-    if (gameState !== 'PLAYING') return;
-    const deltaTime = Math.min((time - lastTimeRef.current) / 1000, 0.1);
+    const deltaTime = Math.min((time - lastTimeRef.current) / 1000, 0.05); // Cap delta time
     lastTimeRef.current = time;
 
-    speedMultiplier.current += 0.05 * deltaTime;
+    if (gameState !== 'PLAYING') return;
+
+    speedMultiplier.current += 0.03 * deltaTime;
     const currentSpeed = BASE_GAME_SPEED * speedMultiplier.current;
     const p = playerRef.current;
     const moveAmt = PLAYER_BASE_SPEED * deltaTime;
 
-    if (keysPressed.current['ArrowLeft']) p.x -= moveAmt;
-    if (keysPressed.current['ArrowRight']) p.x += moveAmt;
-    if (keysPressed.current['ArrowUp']) p.y -= moveAmt;
-    if (keysPressed.current['ArrowDown']) p.y += moveAmt;
+    if (keysPressed.current['ArrowLeft'] || keysPressed.current['btn-left']) p.x -= moveAmt;
+    if (keysPressed.current['ArrowRight'] || keysPressed.current['btn-right']) p.x += moveAmt;
+    if (keysPressed.current['ArrowUp'] || keysPressed.current['btn-up']) p.y -= moveAmt;
+    if (keysPressed.current['ArrowDown'] || keysPressed.current['btn-down']) p.y += moveAmt;
+    
     p.x = Math.max(0, Math.min(GAME_WIDTH - p.width, p.x));
     p.y = Math.max(0, Math.min(GAME_HEIGHT - p.height, p.y));
 
+    // Animation & State Timer
     if (p.isChangingState) {
       p.stateTimer -= deltaTime;
-      if (p.stateTimer <= 0) { p.isChangingState = false; p.spriteKey = 'idle1'; }
+      if (p.stateTimer <= 0) { p.isChangingState = false; p.spriteKey = 'gatot-1'; }
     } else {
       p.animationTimer += deltaTime;
-      if (p.animationTimer >= 0.1) { p.spriteKey = p.spriteKey === 'idle1' ? 'idle2' : 'idle1'; p.animationTimer = 0; }
+      if (p.animationTimer >= 0.15) {
+        p.spriteKey = p.spriteKey === 'gatot-1' ? 'gatot-2' : 'gatot-1';
+        p.animationTimer = 0;
+      }
     }
 
-    // Collision & Spawning simplified for brevity but fully functional
-    const allItems = [...obstaclesRef.current, ...collectiblesRef.current];
-    obstaclesRef.current.forEach(obs => obs.x -= currentSpeed * deltaTime);
-    obstaclesRef.current = obstaclesRef.current.filter(obs => {
-      if (obs.x < -100) return false;
-      if (checkCollision(p, obs)) {
-        if (p.spriteKey !== 'hit') { setLives(l => { if (l - 1 <= 0) setGameState('GAMEOVER'); return l - 1; }); changePlayerState(p, 'hit'); }
-        return false;
+    const playerBox = { x: p.x + 10, y: p.y + 10, w: p.width - 20, h: p.height - 20 };
+
+    // Update & Collision Obstacles
+    for (let i = obstaclesRef.current.length - 1; i >= 0; i--) {
+      const obs = obstaclesRef.current[i];
+      obs.x -= currentSpeed * deltaTime;
+      if (obs.x < -100) { obstaclesRef.current.splice(i, 1); continue; }
+      
+      if (playerBox.x < obs.x + obs.width && playerBox.x + playerBox.w > obs.x &&
+          playerBox.y < obs.y + obs.height && playerBox.y + playerBox.h > obs.y) {
+        if (!p.isChangingState) {
+          setLives(l => { 
+            const newLives = l - 1;
+            if (newLives <= 0) setGameState('GAMEOVER');
+            return newLives;
+          });
+          p.isChangingState = true; p.stateTimer = STATE_DURATION; p.spriteKey = 'gatot-hit';
+          obstaclesRef.current.splice(i, 1);
+        }
       }
-      return true;
-    });
+    }
 
-    collectiblesRef.current.forEach(col => col.x -= currentSpeed * deltaTime);
-    collectiblesRef.current = collectiblesRef.current.filter(col => {
-      if (col.x < -100) return false;
-      if (checkCollision(p, col)) { setScore(s => s + 10); changePlayerState(p, 'collect'); return false; }
-      return true;
-    });
+    // Update & Collision Collectibles
+    for (let i = collectiblesRef.current.length - 1; i >= 0; i--) {
+      const col = collectiblesRef.current[i];
+      col.x -= currentSpeed * deltaTime;
+      if (col.x < -100) { collectiblesRef.current.splice(i, 1); continue; }
 
+      if (playerBox.x < col.x + col.width && playerBox.x + playerBox.w > col.x &&
+          playerBox.y < col.y + col.height && playerBox.y + playerBox.h > col.y) {
+        setScore(s => s + 10);
+        p.isChangingState = true; p.stateTimer = STATE_DURATION; p.spriteKey = 'gatot-collect';
+        collectiblesRef.current.splice(i, 1);
+      }
+    }
+
+    // Optimized Spawning
     if (Math.random() < 0.02) {
-      const s = Math.floor(Math.random() * 45) + 40;
-      const ob = { x: GAME_WIDTH + 50, y: Math.random() * (GAME_HEIGHT - 100) + 50, width: s, height: s, type: 'bomb' };
-      if (!isOverlapping(ob, allItems)) obstaclesRef.current.push(ob);
+      const size = 50 + Math.random() * 30;
+      const newObs = { x: GAME_WIDTH + 50, y: 50 + Math.random() * (GAME_HEIGHT - 150), width: size, height: size };
+      const farEnough = [...obstaclesRef.current, ...collectiblesRef.current].every(item => Math.abs(item.x - newObs.x) > MIN_SPAWN_DISTANCE || Math.abs(item.y - newObs.y) > 80);
+      if (farEnough) obstaclesRef.current.push(newObs);
     }
     if (Math.random() < 0.015) {
-      const s = Math.floor(Math.random() * 35) + 35;
-      const col = { x: GAME_WIDTH + 50, y: Math.random() * (GAME_HEIGHT - 100) + 50, width: s, height: s, type: `collect-${Math.floor(Math.random() * 4)}` };
-      if (!isOverlapping(col, allItems)) collectiblesRef.current.push(col);
+      const size = 40 + Math.random() * 20;
+      const newCol = { x: GAME_WIDTH + 50, y: 50 + Math.random() * (GAME_HEIGHT - 150), width: size, height: size, type: Math.floor(Math.random() * 4) };
+      const farEnough = [...obstaclesRef.current, ...collectiblesRef.current].every(item => Math.abs(item.x - newCol.x) > MIN_SPAWN_DISTANCE || Math.abs(item.y - newCol.y) > 80);
+      if (farEnough) collectiblesRef.current.push(newCol);
     }
   };
 
-  const draw = () => {
-    const ctx = canvasRef.current?.getContext('2d');
-    if (!ctx) return;
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d', { alpha: false });
     const imgs = imagesRef.current;
     const p = playerRef.current;
 
-    ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    // Background
     if (imgs.bg) ctx.drawImage(imgs.bg, 0, 0, GAME_WIDTH, GAME_HEIGHT);
 
     if (gameState !== 'MENU') {
-      obstaclesRef.current.forEach(o => { if (imgs.bomb) ctx.drawImage(imgs.bomb, o.x, o.y, o.width, o.height); });
+      // Collectibles
       collectiblesRef.current.forEach(c => {
-        const idx = parseInt(c.type.split('-')[1]);
-        if (imgs.collect[idx]) ctx.drawImage(imgs.collect[idx], c.x, c.y, c.width, c.height);
+        if (imgs.collect[c.type]) ctx.drawImage(imgs.collect[c.type], c.x, c.y, c.width, c.height);
       });
-      const pImg = imgs[p.spriteKey === 'idle1' ? 'gatot-1' : p.spriteKey === 'idle2' ? 'gatot-2' : p.spriteKey === 'hit' ? 'gatot-hit' : 'gatot-collect'];
+      // Obstacles
+      obstaclesRef.current.forEach(o => {
+        if (imgs.bomb) ctx.drawImage(imgs.bomb, o.x, o.y, o.width, o.height);
+      });
+      // Player
+      const pImg = imgs[p.spriteKey];
       if (pImg) ctx.drawImage(pImg, p.x, p.y, p.width, p.height);
     }
-  };
+  }, [gameState]);
 
-  const loop = (time) => {
-    if (gameState === 'PLAYING') update(time);
+  const loop = useCallback((time) => {
+    update(time);
     draw();
     requestRef.current = requestAnimationFrame(loop);
-  };
+  }, [gameState, draw]);
 
   useEffect(() => {
     requestRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(requestRef.current);
-  }, [gameState, imagesLoaded]);
+  }, [loop]);
 
   // ==========================================================
-  // ## 🎮 UI COMPONENTS
+  // ## 📱 INPUT HANDLERS
   // ==========================================================
 
-  const Button = ({ onClick, label, active }) => (
-    <button onClick={onClick} style={{
-      width: '110px', padding: '8px 0', margin: '0 5px', backgroundColor: active ? '#fff' : '#ddd',
-      border: '1px solid #333', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', color: '#000', textAlign: 'center'
-    }}>{label}</button>
-  );
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      keysPressed.current[e.code] = true;
+      if (e.code === 'Space' && gameState === 'MENU') startGame();
+      if (e.code === 'KeyP') setGameState(prev => prev === 'PLAYING' ? 'PAUSED' : 'PLAYING');
+      if (e.code === 'KeyR' && gameState === 'GAMEOVER') resetGame();
+    };
+    const handleKeyUp = (e) => { keysPressed.current[e.code] = false; };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
+  }, [gameState, startGame, resetGame]);
 
   const TouchButton = ({ symbol, code }) => (
     <button
-      onTouchStart={handleTouchStart(code)} onTouchEnd={handleTouchEnd(code)}
-      onMouseDown={handleTouchStart(code)} onMouseUp={handleTouchEnd(code)}
+      onPointerDown={() => { keysPressed.current[code] = true; }}
+      onPointerUp={() => { keysPressed.current[code] = false; }}
+      onPointerLeave={() => { keysPressed.current[code] = false; }}
       style={{
-        width: '65px', height: '65px', margin: '5px', borderRadius: '10px',
-        backgroundColor: 'rgba(0,0,0,0.6)', border: '2px solid #fff', color: '#fff',
-        fontSize: '24px', fontWeight: 'bold', cursor: 'pointer', userSelect: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center'
+        width: '60px', height: '60px', margin: '5px', borderRadius: '15px',
+        backgroundColor: 'rgba(0,0,0,0.7)', border: '2px solid #fff', color: '#fff',
+        fontSize: '24px', fontWeight: 'bold', userSelect: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center'
       }}>{symbol}</button>
   );
 
-  const ActionButton = ({ label, actionType }) => (
-    <button onClick={handleAction(actionType)} style={{
-      width: '100px', height: '60px', borderRadius: '10px',
-      backgroundColor: actionType === 'start' ? '#28a745' : actionType === 'pause' ? '#ffc107' : '#dc3545',
-      border: '2px solid #fff', color: '#fff', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', zIndex: 100
-    }}>{label}</button>
-  );
-
-  if (!imagesLoaded) return <div style={{ color: 'white', textAlign: 'center', marginTop: 50 }}>Loading Assets...</div>;
+  if (!imagesLoaded) return <div style={{ color: 'white', textAlign: 'center', marginTop: '20%' }}>Loading Wave Rider Nusantara...</div>;
 
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-      backgroundColor: '#111', display: 'flex', flexDirection: 'column',
+      backgroundColor: '#000', display: 'flex', flexDirection: 'column',
       justifyContent: 'center', alignItems: 'center', overflow: 'hidden', touchAction: 'none'
     }}>
-
-      {/* --- TOMBOL AKSI MOBILE (DI ATAS GAME) --- */}
-      {windowSize.scale < 1.0 && (
-        <div style={{
-          position: 'absolute',
-          // Kalkulasi posisi: (Tinggi layar - tinggi game yang diskalakan) / 2 - tinggi tombol
-          top: `calc(50% - ${(GAME_HEIGHT * windowSize.scale) / 2}px - 70px)`,
-          zIndex: 200
-        }}>
-          {gameState === 'MENU' && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-              <ActionButton label={TEXTS.start_btn[language]} actionType="start" />
-            </div>
-          )}
-          {gameState === 'PLAYING' && <ActionButton label={TEXTS.pause_btn[language]} actionType="pause" />}
-          {gameState === 'PAUSED' && <ActionButton label={TEXTS.resume_btn[language]} actionType="pause" />}
-          {gameState === 'GAMEOVER' && <ActionButton label={TEXTS.restart_btn[language]} actionType="restart" />}
-        </div>
-      )}
-
-
       <div style={{
         position: 'relative', width: GAME_WIDTH, height: GAME_HEIGHT,
         transform: `scale(${windowSize.scale})`, transformOrigin: 'center center',
-        boxShadow: '0 0 20px rgba(0,0,0,0.8)', border: '2px solid #555', overflow: 'hidden'
+        boxShadow: '0 0 30px rgba(0,0,0,1)', border: '4px solid #444', backgroundColor: '#000'
       }}>
         <canvas ref={canvasRef} width={GAME_WIDTH} height={GAME_HEIGHT} />
 
         {/* HUD */}
-        {gameState === 'PLAYING' && (
-          <div style={{ position: 'absolute', top: 10, left: 10, padding: '5px', backgroundColor: 'rgba(255, 255, 255, 0.5)', borderRadius: '5px', fontWeight: 'bold', color: 'black', border: 'none' }}>
-            <div>{TEXTS.score[language]} {score}</div>
-            <div>{TEXTS.lives[language]} {lives}</div>
+        {gameState !== 'MENU' && (
+          <div style={{ position: 'absolute', top: 20, left: 20, padding: '10px', backgroundColor: 'rgba(255, 255, 255, 0.7)', borderRadius: '8px', color: '#000', fontWeight: 'bold', pointerEvents: 'none' }}>
+            <div style={{ fontSize: '18px' }}>{TEXTS.score[language]}{score}</div>
+            <div style={{ fontSize: '18px' }}>{TEXTS.lives[language]}{lives}</div>
           </div>
         )}
 
-        {/* MENU OVERLAY */}
+        {/* OVERLAYS */}
         {gameState === 'MENU' && (
-          <div style={{
-            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-            display: 'flex', flexDirection: 'column',
-            justifyContent: 'flex-start', // Mengubah ini dari 'center' ke 'flex-start'
-            alignItems: 'center' // Hapus backgroundColor dari sini
-          }}>
-            <h1 style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.5)', padding: '8px 15px',
-              borderRadius: '10px', border: 'none', color: 'black',
-              marginTop: '20px', // Jarak dari atas
-              marginBottom: '10px', // Jarak ke elemen di bawahnya
-              fontSize: '30px' // Ukuran font judul dikecilkan
-            }}>{TEXTS.title[language]}</h1>
-            {/* --- TAMBAHKAN KODE INI UNTUK MENAMPILKAN KREDIT --- */}
-            <p style={{ fontWeight: 'bold', fontSize: '14px', color: 'black', backgroundColor: 'rgba(255, 255, 255, 0.5)', padding: '5px 15px', borderRadius: '5px', border: 'none', margin: 0, marginBottom: '10px' }}>
-              {TEXTS.credit[language]}
-            </p>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+            <div style={{ backgroundColor: 'rgba(255,255,255,0.7)', padding: '20px', borderRadius: '15px' }}>
+              <h1 style={{ margin: '0 0 10px 0', fontSize: '32px', color: '#000' }}>{TEXTS.title[language]}</h1>
+              <p style={{ margin: '0 0 20px 0', color: '#333' }}>{TEXTS.credit[language]}</p>
+              
+              <div style={{ marginBottom: '20px' }}>
+                <button onClick={() => setLanguage(0)} style={{ padding: '8px 15px', marginRight: '10px', cursor: 'pointer', fontWeight: language === 0 ? 'bold' : 'normal' }}>English</button>
+                <button onClick={() => setLanguage(1)} style={{ padding: '8px 15px', cursor: 'pointer', fontWeight: language === 1 ? 'bold' : 'normal' }}>Indonesia</button>
+              </div>
 
-            {/* Kotak Pilihan Bahasa */}
-            <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.5)', padding: '5px 15px', borderRadius: '5px', textAlign: 'center', color: 'black', border: 'none' }}>
-              <p style={{ margin: '5px 0' }}>{TEXTS.lang_select[language]}</p>
-              <div style={{ marginBottom: '10px' }}>
-                <Button onClick={() => setLanguage(0)} label="English" active={language === 0} />
-                <Button onClick={() => setLanguage(1)} label="Indonesia" active={language === 1} />
+              <div style={{ fontSize: '14px', marginBottom: '20px', maxWidth: '400px', color: '#000' }}>
+                {TEXTS.instructions_menu[language]}<br/>
+                <strong>{TEXTS.start_instructions[language]}</strong>
               </div>
-            </div>
 
-            {/* --- GRUP INSTRUKSI BAWAH (MENU & START) --- */}
-            <div style={{
-              position: 'absolute',
-              bottom: '15px',
-              width: '90%',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '5px' // Jarak antar kotak instruksi
-            }}>
-              {/* Kotak Instruksi Menu */}
-              <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.5)', padding: '5px 15px', borderRadius: '5px', color: 'black', border: 'none', textAlign: 'center' }}>
-                {language === 0 ? TEXTS.instructions_menu[0] : TEXTS.instructions_menu[1]}
-              </div>
-              {/* Kotak Instruksi Mulai (Desktop & Mobile) */}
-              <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.5)', padding: '5px 15px', borderRadius: '5px', color: 'black', border: 'none', textAlign: 'center', fontSize: windowSize.scale < 1.0 ? '14px' : '16px' }}>
-                {TEXTS.start_instructions[language]}
-              </div>
+              <button onClick={startGame} style={{ padding: '15px 40px', fontSize: '20px', fontWeight: 'bold', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>
+                {TEXTS.start_btn[language]}
+              </button>
             </div>
           </div>
         )}
 
-        {/* GAME OVER OVERLAY */}
-        {gameState === 'GAMEOVER' && (
-          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(255, 255, 255, 0.5)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: 'black', border: 'none' }}>
-            <h1>GAME OVER</h1>
-            <h2>{TEXTS.score[language]} {score}</h2>
-            <p>{TEXTS.gameOver[language]}</p>
-          </div>
-        )}
-
-        {/* PAUSE OVERLAY */}
         {gameState === 'PAUSED' && (
-          <div style={{ position: 'absolute', top: '45%', width: '100%', textAlign: 'center', backgroundColor: 'rgba(255, 255, 255, 0.5)', padding: '10px', fontSize: '24px', fontWeight: 'bold', color: 'black', border: 'none' }}>
-            {TEXTS.pause[language]}
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ backgroundColor: '#fff', padding: '20px 40px', borderRadius: '10px', fontSize: '24px', fontWeight: 'bold', color: '#000' }}>
+              {TEXTS.pause[language]}
+            </div>
+          </div>
+        )}
+
+        {gameState === 'GAMEOVER' && (
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+            <h1 style={{ fontSize: '48px', color: '#ff4444' }}>GAME OVER</h1>
+            <h2 style={{ fontSize: '32px' }}>{TEXTS.score[language]} {score}</h2>
+            <p style={{ fontSize: '18px', marginBottom: '30px' }}>{TEXTS.gameOver[language]}</p>
+            <button onClick={resetGame} style={{ padding: '15px 40px', fontSize: '20px', fontWeight: 'bold', backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>
+              {TEXTS.restart_btn[language]}
+            </button>
           </div>
         )}
       </div>
 
-      {/* --- MOBILE CONTROLS (OUTSIDE SCALED AREA) --- */}
-      {windowSize.scale < 1.0 && (
-        <div style={{
-          position: 'absolute',
-          // Kalkulasi posisi: 50% (tengah layar) + setengah tinggi game + 5px jarak
-          top: `calc(50% + ${(GAME_HEIGHT * windowSize.scale) / 2}px + 5px)`,
-          width: '100%',
-          zIndex: 200
-        }}>
-
-          {/* D-PAD (Kiri Bawah) */}
-          {gameState === 'PLAYING' && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <TouchButton symbol="↑" code="btn-up" />
-              <div style={{ display: 'flex' }}><TouchButton symbol="←" code="btn-left" /><TouchButton symbol="↓" code="btn-down" /><TouchButton symbol="→" code="btn-right" /></div>
-            </div>
-          )}
+      {/* MOBILE DPAD */}
+      {windowSize.scale < 1.0 && gameState === 'PLAYING' && (
+        <div style={{ position: 'fixed', bottom: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1000 }}>
+          <TouchButton symbol="↑" code="btn-up" />
+          <div style={{ display: 'flex' }}>
+            <TouchButton symbol="←" code="btn-left" />
+            <TouchButton symbol="↓" code="btn-down" />
+            <TouchButton symbol="→" code="btn-right" />
+          </div>
         </div>
       )}
-
     </div>
   );
 };
