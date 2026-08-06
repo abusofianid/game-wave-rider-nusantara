@@ -228,7 +228,7 @@ export default function WaveRiderGame() {
       loadSingleImage(key, src);
     });
 
-    const bgMusic = new Audio('/assets/audio/bg-sound.wav');
+    const bgMusic = new Audio('/assets/audio/bg-sound.webm');
     bgMusic.loop = true;
     bgMusic.volume = 0.05;
     audioRef.current = bgMusic;
