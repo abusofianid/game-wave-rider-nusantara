@@ -31,6 +31,7 @@ cd game-wave-rider-nusantara
 #### ▶️ Running the Web Version (React)
 **Make sure Node.js is installed.**
 ```bash
+cd react
 npm install
 npm run dev
 ```

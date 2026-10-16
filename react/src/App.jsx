@@ -18,7 +18,28 @@ const TEXTS = {
   pause_btn: ["PAUSE", "JEDA"],
   resume_btn: ["RESUME", "LANJUT"],
   restart_btn: ["RESTART", "MULAI ULANG"],
+  mute: ["Mute sound", "Matikan suara"],
   credit: ["Created by Abu Sofian", "Dibuat oleh Abu Sofian"]
+};
+
+// Module-level so React keeps the same element between renders: a button defined inside
+// the game component is remounted on every score change and drops the finger's pointerup.
+const touchStyle = {
+  height: '60px', margin: '5px', borderRadius: '15px',
+  backgroundColor: 'rgba(0,0,0,0.7)', border: '2px solid #fff', color: '#fff',
+  fontWeight: 'bold', userSelect: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center'
+};
+
+const TouchButton = ({ symbol, code, keys }) => {
+  const release = () => { keys.current[code] = false; };
+  return (
+    <button
+      onPointerDown={() => { keys.current[code] = true; }}
+      onPointerUp={release}
+      onPointerLeave={release}
+      onPointerCancel={release}
+      style={{ ...touchStyle, width: '60px', fontSize: '24px' }}>{symbol}</button>
+  );
 };
 
 const GAME_WIDTH = 800;
@@ -145,6 +166,7 @@ export default function WaveRiderGame() {
   const [lives, setLives] = useState(3);
   const [language, setLanguage] = useState(0);
   const [imagesLoaded, setImagesLoaded] = useState(false);
+  const [muted, setMuted] = useState(false);
 
   const canvasRef = useRef(null);
   const requestRef = useRef(0);
@@ -157,6 +179,7 @@ export default function WaveRiderGame() {
     isChangingState: false, stateTimer: 0.0, spriteKey: 'gatot-1', animationTimer: 0.0
   });
 
+  const livesRef = useRef(3);
   const obstaclesRef = useRef([]);
   const collectiblesRef = useRef([]);
   const keysPressed = useRef({});
@@ -169,11 +192,11 @@ export default function WaveRiderGame() {
 
   useEffect(() => {
     const imageSources = {
-      'gatot-1': '/assets/images/gatot-1.png', 'gatot-2': '/assets/images/gatot-2.png',
-      'gatot-hit': '/assets/images/gatot-hit.png', 'gatot-collect': '/assets/images/gatot-collect.png',
-      'bomb': '/assets/images/bomb.png', 'bg': '/assets/images/bg.png',
+      'gatot-1': '/assets/images/gatot-1.webp', 'gatot-2': '/assets/images/gatot-2.webp',
+      'gatot-hit': '/assets/images/gatot-hit.webp', 'gatot-collect': '/assets/images/gatot-collect.webp',
+      'bomb': '/assets/images/bomb.webp', 'bg': '/assets/images/bg.webp',
     };
-    for (let i = 0; i <= 3; i++) { imageSources[`collect-${i}`] = `/assets/images/collect-${i+1}.png`; }
+    for (let i = 0; i <= 3; i++) { imageSources[`collect-${i}`] = `/assets/images/collect-${i+1}.webp`; }
 
     let loadedCount = 0;
     const totalImages = Object.keys(imageSources).length;
@@ -218,6 +241,8 @@ export default function WaveRiderGame() {
             }
             checkFinished();
           };
+          // Without this, a failed fallback leaves the loading screen stuck forever
+          fbImg.onerror = checkFinished;
         } else {
           checkFinished();
         }
@@ -254,9 +279,17 @@ export default function WaveRiderGame() {
     obstaclesRef.current = [];
     collectiblesRef.current = [];
     speedMultiplier.current = 1.0;
+    // Touch buttons unmount on game over, so a held button never gets its pointerup
+    keysPressed.current = {};
+    livesRef.current = 3;
     setScore(0);
     setLives(3);
     setGameState('MENU');
+  }, []);
+
+  const togglePause = useCallback(() => {
+    // Only PLAYING and PAUSED toggle; P must not start a game or revive a finished one
+    setGameState(prev => (prev === 'PLAYING' ? 'PAUSED' : prev === 'PAUSED' ? 'PLAYING' : prev));
   }, []);
 
   const update = useCallback((time) => {
@@ -301,11 +334,9 @@ export default function WaveRiderGame() {
       if (playerBox.x < obs.x + obs.width && playerBox.x + playerBox.w > obs.x &&
           playerBox.y < obs.y + obs.height && playerBox.y + playerBox.h > obs.y) {
         if (!p.isChangingState) {
-          setLives(l => { 
-            const newLives = l - 1;
-            if (newLives <= 0) setGameState('GAMEOVER');
-            return newLives;
-          });
+          livesRef.current -= 1;
+          setLives(livesRef.current);
+          if (livesRef.current <= 0) setGameState('GAMEOVER');
           p.isChangingState = true; p.stateTimer = STATE_DURATION; p.spriteKey = 'gatot-hit';
           obstaclesRef.current.splice(i, 1);
         }
@@ -326,14 +357,15 @@ export default function WaveRiderGame() {
       }
     }
 
-    // Optimized Spawning
-    if (Math.random() < 0.02) {
+    // Optimized Spawning (chances are per 60 FPS frame, scaled by frame time so 120/144 Hz spawns the same)
+    const frameScale = deltaTime * 60;
+    if (Math.random() < 0.02 * frameScale) {
       const size = 50 + Math.random() * 30;
       const newObs = { x: GAME_WIDTH + 50, y: 50 + Math.random() * (GAME_HEIGHT - 150), width: size, height: size };
       const farEnough = [...obstaclesRef.current, ...collectiblesRef.current].every(item => Math.abs(item.x - newObs.x) > MIN_SPAWN_DISTANCE || Math.abs(item.y - newObs.y) > 80);
       if (farEnough) obstaclesRef.current.push(newObs);
     }
-    if (Math.random() < 0.015) {
+    if (Math.random() < 0.015 * frameScale) {
       const size = 40 + Math.random() * 20;
       const newCol = { x: GAME_WIDTH + 50, y: 50 + Math.random() * (GAME_HEIGHT - 150), width: size, height: size, type: Math.floor(Math.random() * 4) };
       const farEnough = [...obstaclesRef.current, ...collectiblesRef.current].every(item => Math.abs(item.x - newCol.x) > MIN_SPAWN_DISTANCE || Math.abs(item.y - newCol.y) > 80);
@@ -395,26 +427,29 @@ export default function WaveRiderGame() {
     const handleKeyDown = (e) => {
       keysPressed.current[e.code] = true;
       if (e.code === 'Space' && gameState === 'MENU') startGame();
-      if (e.code === 'KeyP') setGameState(prev => prev === 'PLAYING' ? 'PAUSED' : 'PLAYING');
+      if (e.code === 'KeyP') togglePause();
       if (e.code === 'KeyR' && gameState === 'GAMEOVER') resetGame();
     };
     const handleKeyUp = (e) => { keysPressed.current[e.code] = false; };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
-  }, [gameState, startGame, resetGame]);
+  }, [gameState, startGame, resetGame, togglePause]);
 
-  const TouchButton = ({ symbol, code }) => (
-    <button
-      onPointerDown={() => { keysPressed.current[code] = true; }}
-      onPointerUp={() => { keysPressed.current[code] = false; }}
-      onPointerLeave={() => { keysPressed.current[code] = false; }}
-      style={{
-        width: '60px', height: '60px', margin: '5px', borderRadius: '15px',
-        backgroundColor: 'rgba(0,0,0,0.7)', border: '2px solid #fff', color: '#fff',
-        fontSize: '24px', fontWeight: 'bold', userSelect: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center'
-      }}>{symbol}</button>
-  );
+  // ==========================================================
+  // ## 🔊 AUDIO (pause with the game, mute toggle)
+  // ==========================================================
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.muted = muted;
+  }, [muted]);
+
+  useEffect(() => {
+    const music = audioRef.current;
+    if (!music) return;
+    if (gameState === 'PLAYING') music.play().catch(() => {});
+    else music.pause();
+  }, [gameState]);
 
   if (!imagesLoaded) {
     return (
@@ -624,16 +659,40 @@ export default function WaveRiderGame() {
             </div>
           </div>
         )}
+
+        {/* MUTE (last child so the full-screen overlays above never cover it) */}
+        <button
+          onClick={(e) => { setMuted(m => !m); e.currentTarget.blur(); }}
+          aria-label={TEXTS.mute[language]}
+          aria-pressed={muted}
+          style={{
+            position: 'absolute', top: 20, right: 20, width: '44px', height: '44px',
+            fontSize: '20px', cursor: 'pointer', borderRadius: '12px',
+            backgroundColor: 'rgba(255, 255, 255, 0.40)', backdropFilter: 'blur(4px)',
+            border: '1px solid rgba(255, 255, 255, 0.5)'
+          }}
+        >
+          {muted ? '🔇' : '🔊'}
+        </button>
       </div>
 
-      {/* MOBILE DPAD */}
-      {windowSize.scale < 1.0 && gameState === 'PLAYING' && (
+      {/* MOBILE DPAD + PAUSE (stay mounted while paused so a held button still gets its pointerup) */}
+      {windowSize.scale < 1.0 && (gameState === 'PLAYING' || gameState === 'PAUSED') && (
         <div style={{ position: 'fixed', bottom: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1000 }}>
-          <TouchButton symbol="↑" code="btn-up" />
           <div style={{ display: 'flex' }}>
-            <TouchButton symbol="←" code="btn-left" />
-            <TouchButton symbol="↓" code="btn-down" />
-            <TouchButton symbol="→" code="btn-right" />
+            <div style={{ width: '70px' }} />
+            <TouchButton symbol="↑" code="btn-up" keys={keysPressed} />
+            <button
+              onClick={(e) => { togglePause(); e.currentTarget.blur(); }}
+              style={{ ...touchStyle, width: '60px', padding: 0, fontSize: '12px' }}
+            >
+              {gameState === 'PLAYING' ? TEXTS.pause_btn[language] : TEXTS.resume_btn[language]}
+            </button>
+          </div>
+          <div style={{ display: 'flex' }}>
+            <TouchButton symbol="←" code="btn-left" keys={keysPressed} />
+            <TouchButton symbol="↓" code="btn-down" keys={keysPressed} />
+            <TouchButton symbol="→" code="btn-right" keys={keysPressed} />
           </div>
         </div>
       )}
