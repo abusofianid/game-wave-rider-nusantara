@@ -678,23 +678,26 @@ export default function WaveRiderGame() {
 
       {/* MOBILE DPAD + PAUSE (stay mounted while paused so a held button still gets its pointerup) */}
       {windowSize.scale < 1.0 && (gameState === 'PLAYING' || gameState === 'PAUSED') && (
-        <div style={{ position: 'fixed', bottom: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1000 }}>
-          <div style={{ display: 'flex' }}>
-            <div style={{ width: '70px' }} />
+        <>
+          <div style={{ position: 'fixed', bottom: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1000 }}>
             <TouchButton symbol="↑" code="btn-up" keys={keysPressed} />
-            <button
-              onClick={(e) => { togglePause(); e.currentTarget.blur(); }}
-              style={{ ...touchStyle, width: '60px', padding: 0, fontSize: '12px' }}
-            >
-              {gameState === 'PLAYING' ? TEXTS.pause_btn[language] : TEXTS.resume_btn[language]}
-            </button>
+            <div style={{ display: 'flex' }}>
+              <TouchButton symbol="←" code="btn-left" keys={keysPressed} />
+              <TouchButton symbol="↓" code="btn-down" keys={keysPressed} />
+              <TouchButton symbol="→" code="btn-right" keys={keysPressed} />
+            </div>
           </div>
-          <div style={{ display: 'flex' }}>
-            <TouchButton symbol="←" code="btn-left" keys={keysPressed} />
-            <TouchButton symbol="↓" code="btn-down" keys={keysPressed} />
-            <TouchButton symbol="→" code="btn-right" keys={keysPressed} />
-          </div>
-        </div>
+          {/* Top centre, away from the D-pad thumbs; the HUD (left) and mute (right) leave this spot free */}
+          <button
+            onClick={(e) => { togglePause(); e.currentTarget.blur(); }}
+            style={{
+              ...touchStyle, position: 'fixed', top: '8px', left: '50%', transform: 'translateX(-50%)',
+              height: '44px', margin: 0, padding: '0 18px', fontSize: '14px', zIndex: 1000
+            }}
+          >
+            {gameState === 'PLAYING' ? TEXTS.pause_btn[language] : TEXTS.resume_btn[language]}
+          </button>
+        </>
       )}
     </div>
   );
