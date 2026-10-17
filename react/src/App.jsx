@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useGameWindow } from './useGameWindow';
+import { Analytics } from '@vercel/analytics/react';
 
 // ==========================================================
 // ## 📝 KONFIGURASI & KONSTANTA
@@ -699,6 +700,7 @@ export default function WaveRiderGame() {
           </button>
         </>
       )}
+      <Analytics />
     </div>
   );
 }
