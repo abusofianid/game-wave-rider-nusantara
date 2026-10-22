@@ -1,0 +1,22 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Wave Rider Nusantara
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Abu Sofian
+    email: abusofian.id@gmail.com
+identifiers:
+  - type: url
+    value: 'https://waveridernusantara.vercel.app/'
+repository-code: 'https://github.com/abusofianid/game-wave-rider-nusantara'
+abstract: >-
+  Wave Rider Nusantara is a simple 2D endless runner game.
+  The main goal of this game is to collect cultural items
+  (such as Batik Patterns) while avoiding bombs that act as
+  obstacles.
+license: Apache-2.0
