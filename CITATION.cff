@@ -19,4 +19,6 @@ abstract: >-
   The main goal of this game is to collect cultural items
   (such as Batik Patterns) while avoiding bombs that act as
   obstacles.
-license: Apache-2.0
+license: 
+  - Apache-2.0
+  - MIT
