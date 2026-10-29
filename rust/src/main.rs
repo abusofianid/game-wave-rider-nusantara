@@ -179,8 +179,6 @@ async fn main() {
         let (mx, raw_my) = touch_position
             .map(|touch| (touch.position.x, touch.position.y))
             .unwrap_or_else(mouse_position);
-        let pointer_down = is_mouse_button_down(MouseButton::Left)
-            || active_touches.iter().any(|touch| matches!(touch.phase, TouchPhase::Started | TouchPhase::Moved | TouchPhase::Stationary));
         let click = is_mouse_button_pressed(MouseButton::Left) || touch_click;
 
         clear_background(BLACK);
