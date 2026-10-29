@@ -6,13 +6,24 @@
     <meta name="theme-color" content="#000000">
     <title>Wave Rider Nusantara — Rust</title>
     <style>
-      html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
-      body { display: grid; grid-template-rows: minmax(0, 1fr) 150px; }
-      canvas { width: 100%; height: 100%; min-height: 0; display: block; outline: none; touch-action: none; -webkit-tap-highlight-color: transparent; transform: scaleY(-1); transform-origin: center; image-rendering: auto; backface-visibility: hidden; }
-      #game-controls { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px 12px calc(4px + env(safe-area-inset-bottom)); background: #000; border-top: 1px solid #383838; touch-action: none; }
+      :root { color-scheme: dark; }
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body { margin: 0; width: 100%; height: 100%; height: 100dvh; overflow: hidden; background: #000; overscroll-behavior: none; }
+      body { display: grid; grid-template-rows: minmax(0, 1fr) clamp(96px, 22dvh, 150px); }
+      canvas { width: 100%; height: 100%; min-width: 0; min-height: 0; display: block; outline: none; touch-action: none; -webkit-tap-highlight-color: transparent; transform: scaleY(-1); transform-origin: center; image-rendering: auto; }
+      #game-controls { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; min-height: 0; padding: 3px 8px calc(3px + env(safe-area-inset-bottom)); background: #000; border-top: 1px solid #383838; touch-action: none; }
       #game-controls .control-row { display: flex; justify-content: center; }
-      #game-controls button { width: 60px; height: 60px; margin: 2px 5px; border-radius: 15px; background: rgba(0,0,0,0.7); border: 2px solid #fff; color: #fff; font: 700 24px/1 system-ui, sans-serif; display: flex; justify-content: center; align-items: center; touch-action: none; -webkit-tap-highlight-color: transparent; user-select: none; padding: 0; }
-      #game-controls button:active { background: rgba(255,255,255,0.25); }
+      #game-controls button { width: clamp(42px, 12vw, 60px); height: clamp(42px, 12vw, 60px); margin: 1px clamp(3px, 1.2vw, 5px); border-radius: clamp(10px, 2.5vw, 15px); background: rgba(18,18,18,0.9); border: 1.5px solid #fff; color: #fff; font: 700 clamp(19px, 5vw, 24px)/1 system-ui, sans-serif; display: flex; justify-content: center; align-items: center; touch-action: none; -webkit-tap-highlight-color: transparent; user-select: none; padding: 0; transition: background-color 90ms ease-out; }
+      #game-controls button:active { background: rgba(255,255,255,0.28); }
+      @media (max-height: 500px) and (orientation: landscape) {
+        body { grid-template-rows: minmax(0, 1fr) 84px; }
+        #game-controls { flex-direction: row; gap: 8px; padding: 2px 8px calc(2px + env(safe-area-inset-bottom)); }
+        #game-controls .control-row { align-items: center; }
+        #game-controls button { width: clamp(34px, 8vh, 46px); height: clamp(34px, 8vh, 46px); margin: 1px 3px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #game-controls button { transition: none; }
+      }
     </style>
   </head>
   <body>
@@ -102,8 +113,27 @@
         };
         const pause = () => music.pause();
 
-        // Avoid guessed canvas coordinates; CSS scaling differs across screen sizes.
-        canvas.addEventListener("pointerdown", () => {
+        // Convert pointer coordinates through the same 4:3 letterboxed viewport
+        // used by Rust, so the in-game SOUND button also controls this audio element.
+        const soundButtonHit = (event) => {
+          const rect = canvas.getBoundingClientRect();
+          if (!rect.width || !rect.height) return false;
+          const screenX = (event.clientX - rect.left) * window.innerWidth / rect.width;
+          const screenY = window.innerHeight - (event.clientY - rect.top) * window.innerHeight / rect.height;
+          const scale = Math.min(window.innerWidth / 800, window.innerHeight / 600);
+          const offsetX = (window.innerWidth - 800 * scale) / 2;
+          const offsetY = (window.innerHeight - 600 * scale) / 2;
+          const x = (screenX - offsetX) / scale;
+          const y = (screenY - offsetY) / scale;
+          return x >= 670 && x <= 782 && y >= 18 && y <= 52;
+        };
+        const toggleMute = () => {
+          muted = !muted;
+          music.muted = muted;
+          if (!muted && started && !paused) play();
+        };
+        canvas.addEventListener("pointerdown", (event) => {
+          if (soundButtonHit(event)) toggleMute();
           if (!started) {
             started = true;
             paused = false;
@@ -119,9 +149,7 @@
             paused = !paused;
             if (paused) pause(); else play();
           } else if (event.code === "KeyM") {
-            muted = !muted;
-            music.muted = muted;
-            if (!muted && started && !paused) play();
+            toggleMute();
           } else if (event.code === "KeyR" && started) {
             started = false;
             paused = false;
