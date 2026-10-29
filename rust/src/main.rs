@@ -1,6 +1,3 @@
-use macroquad::audio::{
-    load_sound, play_sound, set_sound_volume, PlaySoundParams, Sound,
-};
 use macroquad::prelude::*;
 use macroquad::rand::gen_range;
 
@@ -144,20 +141,14 @@ async fn main() {
     let scale_player = (TARGET_SIZE / a.idle[0].width()).min(TARGET_SIZE / a.idle[0].height());
     let mut player = Player::new(a.idle[0].width() * scale_player, a.idle[0].height() * scale_player);
     let mut state = GameState::Menu;
-    let mut bombs = Vec::<Thing>::new();
-    let mut items = Vec::<Collectible>::new();
+    // Reserve room for typical active objects to reduce allocation churn during play.
+    let mut bombs = Vec::<Thing>::with_capacity(32);
+    let mut items = Vec::<Collectible>::with_capacity(32);
     let mut score = 0_u32;
     let mut lives = 3_u8;
     let mut speed = 1.0_f32;
     let mut language = 1_usize;
     let mut muted = false;
-    // Preload audio before the start gesture. Awaiting load_sound inside the tap
-    // handler can lose the browser's transient user activation and leave WebAudio muted.
-    let music: Option<Sound> = match load_sound("assets/audio/bg-sound.ogg").await {
-        Ok(sound) => Some(sound),
-        Err(error) => { eprintln!("Background audio failed to load: {error}"); None }
-    };
-    let mut music_started = false;
 
     loop {
         let dt = get_frame_time().min(0.05);
@@ -253,13 +244,6 @@ async fn main() {
             }
         }
 
-        if music_started {
-            // Audio is optional and must never prevent the game from remaining playable.
-            if let Some(sound) = music.as_ref() {
-                let volume = if muted || state != GameState::Playing { 0.0 } else { 0.12 };
-                set_sound_volume(sound, volume);
-            }
-        }
 
         draw_scene(&a, &player, &bombs, &items, state);
         let en = language == 0;
@@ -282,13 +266,6 @@ async fn main() {
                 if button(if en { "START" } else { "MULAI" }, Rect::new(300.0, 372.0, 200.0, 54.0), true,
                     Color::new(0.16, 0.65, 0.27, 1.0), &a.font, mouse, click) || is_key_pressed(KeyCode::Space) {
                     state = GameState::Playing;
-                    if !music_started {
-                        // Start the already-loaded sound directly in the user's tap handler.
-                        if let Some(sound) = music.as_ref() {
-                            play_sound(sound, PlaySoundParams { looped: true, volume: if muted { 0.0 } else { 0.12 } });
-                            music_started = true;
-                        }
-                    }
                 }
             }
             GameState::Playing | GameState::Paused => {
