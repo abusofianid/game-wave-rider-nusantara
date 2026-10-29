@@ -61,7 +61,7 @@
         // Start the watchdog immediately. Waiting for the window "load" event can
         // leave the original message stuck if the loader stalls before that event.
         window.setTimeout(() => {
-          if (!failed && status.dataset.failed !== "true" && status.dataset.phase !== "starting" && !status.hidden) {
+          if (!failed && status.dataset.phase !== "running" && !status.hidden) {
             showError(
               "WebAssembly startup timed out",
               "The page loaded, but the game did not finish initializing within 12 seconds. Check whether wave_rider_nusantara.wasm and the assets under assets/ load successfully, and whether the browser supports WebGL."
@@ -140,6 +140,36 @@
           message.textContent = "All required files responded successfully. Starting the Rust WebAssembly game…";
           status.dataset.phase = "starting";
           load("./wave_rider_nusantara.wasm");
+
+          // Keep the overlay until the game canvas has actually rendered pixels.
+          const canvas = document.getElementById("glcanvas");
+          let renderContext = null;
+          let renderDetected = false;
+          function detectRenderedFrame() {
+            if (renderDetected || status.dataset.phase === "failed") return;
+            try {
+              renderContext = renderContext || canvas.getContext("webgl2") || canvas.getContext("webgl");
+              if (renderContext) {
+                const gl = renderContext;
+                const pixel = new Uint8Array(4);
+                for (let y = 20; y < canvas.height; y += Math.max(1, Math.floor(canvas.height / 8))) {
+                  for (let x = 20; x < canvas.width; x += Math.max(1, Math.floor(canvas.width / 8))) {
+                    gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+                    if (pixel[0] > 24 || pixel[1] > 24 || pixel[2] > 24) {
+                      renderDetected = true;
+                      status.dataset.phase = "running";
+                      status.hidden = true;
+                      return;
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              // Keep diagnostics visible if pixel readback is unavailable.
+            }
+            window.requestAnimationFrame(detectRenderedFrame);
+          }
+          window.requestAnimationFrame(detectRenderedFrame);
         } catch (error) {
           showFailure("Could not start WebAssembly", error && error.message ? error.message : String(error));
         }
