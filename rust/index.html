@@ -7,11 +7,12 @@
     <title>Wave Rider Nusantara — Rust</title>
     <style>
       html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
-      body { display: grid; grid-template-rows: minmax(0, 1fr) 82px; }
+      body { display: grid; grid-template-rows: minmax(0, 1fr) 150px; }
       canvas { width: 100%; height: 100%; min-height: 0; display: block; outline: none; touch-action: none; -webkit-tap-highlight-color: transparent; transform: scaleY(-1); transform-origin: center; image-rendering: auto; }
-      #game-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: center; padding: 10px max(12px, env(safe-area-inset-left)) calc(10px + env(safe-area-inset-bottom)); background: #101010; border-top: 1px solid #383838; }
-      #game-controls button { min-width: 0; height: 52px; border: 1px solid #777; border-radius: 10px; background: #242424; color: #fff; font: 600 23px/1 system-ui, sans-serif; touch-action: none; -webkit-tap-highlight-color: transparent; user-select: none; }
-      #game-controls button:active { background: #454545; }
+      #game-controls { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px 12px calc(4px + env(safe-area-inset-bottom)); background: #000; border-top: 1px solid #383838; touch-action: none; }
+      #game-controls .control-row { display: flex; justify-content: center; }
+      #game-controls button { width: 60px; height: 60px; margin: 2px 5px; border-radius: 15px; background: rgba(0,0,0,0.7); border: 2px solid #fff; color: #fff; font: 700 24px/1 system-ui, sans-serif; display: flex; justify-content: center; align-items: center; touch-action: none; -webkit-tap-highlight-color: transparent; user-select: none; padding: 0; }
+      #game-controls button:active { background: rgba(255,255,255,0.25); }
       #startup-status { position: fixed; z-index: 5; inset: auto 12px 94px; padding: 12px 14px; border: 1px solid #666; border-radius: 8px; background: #171717; color: #fff; font: 14px/1.45 system-ui, sans-serif; overflow-wrap: anywhere; }
       #startup-status[hidden] { display: none; }
       #startup-status strong { display: block; margin-bottom: 4px; }
@@ -20,22 +21,32 @@
   <body>
     <canvas id="glcanvas" tabindex="1" aria-label="Wave Rider Nusantara game"></canvas>
     <nav id="game-controls" aria-label="Game movement controls">
-      <button type="button" data-key="ArrowLeft" aria-label="Move left">←</button>
-      <button type="button" data-key="ArrowUp" aria-label="Move up">↑</button>
-      <button type="button" data-key="ArrowDown" aria-label="Move down">↓</button>
-      <button type="button" data-key="ArrowRight" aria-label="Move right">→</button>
+      <button type="button" data-key="ArrowUp" data-key-code="38" aria-label="Move up">↑</button>
+      <div class="control-row">
+        <button type="button" data-key="ArrowLeft" data-key-code="37" aria-label="Move left">←</button>
+        <button type="button" data-key="ArrowDown" data-key-code="40" aria-label="Move down">↓</button>
+        <button type="button" data-key="ArrowRight" data-key-code="39" aria-label="Move right">→</button>
+      </div>
     </nav>
     <script>
-      // Forward the separate control strip to Macroquad's keyboard input.
-      // The controls are outside the canvas so they never cover the playfield.
+      // Forward held D-pad presses to the same keyboard path used by Macroquad.
+      // Dispatch from the canvas so listeners attached to the canvas or window receive them.
       (() => {
         const controls = document.getElementById("game-controls");
+        const canvas = document.getElementById("glcanvas");
         const activeKeys = new Set();
+        const emit = (button, type) => {
+          const key = button.dataset.key;
+          const keyCode = Number(button.dataset.keyCode);
+          canvas.dispatchEvent(new KeyboardEvent(type, {
+            key, code: key, keyCode, which: keyCode, bubbles: true, cancelable: true
+          }));
+        };
         const release = (button) => {
           const key = button.dataset.key;
           if (!key || !activeKeys.has(key)) return;
           activeKeys.delete(key);
-          window.dispatchEvent(new KeyboardEvent("keyup", { key, code: key, bubbles: true }));
+          emit(button, "keyup");
         };
         controls.querySelectorAll("button[data-key]").forEach((button) => {
           button.addEventListener("pointerdown", (event) => {
@@ -43,11 +54,12 @@
             const key = button.dataset.key;
             if (!activeKeys.has(key)) {
               activeKeys.add(key);
-              window.dispatchEvent(new KeyboardEvent("keydown", { key, code: key, bubbles: true }));
+              emit(button, "keydown");
             }
             try { button.setPointerCapture(event.pointerId); } catch {}
           });
           button.addEventListener("pointerup", () => release(button));
+          button.addEventListener("pointerleave", () => release(button));
           button.addEventListener("pointercancel", () => release(button));
           button.addEventListener("lostpointercapture", () => release(button));
           button.addEventListener("contextmenu", (event) => event.preventDefault());
