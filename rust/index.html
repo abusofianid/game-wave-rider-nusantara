@@ -79,12 +79,6 @@
         window.addEventListener("blur", () => controls.querySelectorAll("button[data-key]").forEach(release));
       })();
     </script>
-    <script>
-      // Prevent mobile browser gestures from stealing taps intended for the game.
-      document.getElementById("glcanvas").addEventListener("touchstart", (event) => {
-        event.preventDefault();
-      }, { passive: false });
-    </script>
     <script src="./mq_js_bundle.js"></script>
     <script>
       // Use one native HTMLAudioElement and start it synchronously from a user gesture.
@@ -95,7 +89,7 @@
         // Do not compete with the WASM and visual assets during startup.
         // The soundtrack is fetched when playback is first requested.
         music.preload = "none";
-        music.volume = 0.05;
+        music.volume = 0.15;
         let started = false;
         let paused = false;
         let muted = false;
@@ -153,7 +147,12 @@
           event.stopPropagation();
           toggleMute();
         });
-        canvas.addEventListener("pointerdown", startAudio);
+        // Mouse activation is available on pointerdown; touch activation is
+        // reliably available on pointerup in mobile browsers.
+        canvas.addEventListener("pointerdown", (event) => {
+          if (event.pointerType === "mouse") startAudio();
+        });
+        canvas.addEventListener("pointerup", startAudio);
         updateSoundButton();
         window.addEventListener("keydown", (event) => {
           if (event.code === "Space" && !started) {
