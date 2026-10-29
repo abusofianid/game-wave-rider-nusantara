@@ -90,9 +90,25 @@ fn centered_text(s: &str, center_x: f32, y: f32, size: u16, color: Color, font: 
     let metrics = measure_text(s, Some(font), size, 1.0);
     text(s, center_x - metrics.width / 2.0, y, size, color, font);
 }
+fn rounded_fill(r: Rect, radius: f32, color: Color) {
+    let radius = radius.min(r.w * 0.5).min(r.h * 0.5).max(0.0);
+    if radius == 0.0 {
+        draw_rectangle(r.x, r.y, r.w, r.h, color);
+        return;
+    }
+    // Non-overlapping pieces keep translucent glass at a consistent opacity.
+    draw_rectangle(r.x + radius, r.y + radius, r.w - radius * 2.0, r.h - radius * 2.0, color);
+    draw_rectangle(r.x + radius, r.y, r.w - radius * 2.0, radius, color);
+    draw_rectangle(r.x + radius, r.y + r.h - radius, r.w - radius * 2.0, radius, color);
+    draw_rectangle(r.x, r.y + radius, radius, r.h - radius * 2.0, color);
+    draw_rectangle(r.x + r.w - radius, r.y + radius, radius, r.h - radius * 2.0, color);
+    draw_circle(r.x + radius, r.y + radius, radius, color);
+    draw_circle(r.x + r.w - radius, r.y + radius, radius, color);
+    draw_circle(r.x + radius, r.y + r.h - radius, radius, color);
+    draw_circle(r.x + r.w - radius, r.y + r.h - radius, radius, color);
+}
 fn glass(r: Rect, alpha: f32) {
-    draw_rectangle(r.x, r.y, r.w, r.h, Color::new(1.0, 1.0, 1.0, alpha));
-    draw_rectangle_lines(r.x, r.y, r.w, r.h, 1.0, Color::new(1.0, 1.0, 1.0, 0.55));
+    rounded_fill(r, 22.0, Color::new(1.0, 1.0, 1.0, alpha));
 }
 fn button(s: &str, r: Rect, active: bool, fill: Color, font: &Font, mouse: Vec2, click: bool) -> bool {
     let bg = if active { Color::new(0.07, 0.07, 0.07, 0.98) } else { fill };
