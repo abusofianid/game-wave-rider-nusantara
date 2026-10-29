@@ -113,8 +113,15 @@ fn glass(r: Rect, alpha: f32) {
 fn button(s: &str, r: Rect, active: bool, fill: Color, font: &Font, mouse: Vec2, click: bool) -> bool {
     let bg = if active { Color::new(0.07, 0.07, 0.07, 0.98) } else { fill };
     let fg = if active { WHITE } else { Color::new(0.12, 0.12, 0.12, 1.0) };
-    draw_rectangle(r.x, r.y, r.w, r.h, bg);
-    draw_rectangle_lines(r.x, r.y, r.w, r.h, if active { 2.0 } else { 1.0 }, Color::new(0.85, 0.85, 0.85, 0.95));
+    // Draw a rounded border and an inset rounded fill; rectangle_lines would
+    // reintroduce square corners over the glass treatment.
+    rounded_fill(r, 11.0, Color::new(0.85, 0.85, 0.85, 0.95));
+    let inset = if active { 2.0 } else { 1.5 };
+    rounded_fill(
+        Rect::new(r.x + inset, r.y + inset, r.w - inset * 2.0, r.h - inset * 2.0),
+        (11.0 - inset).max(0.0),
+        bg,
+    );
     let m = measure_text(s, Some(font), 18, 1.0);
     text(s, r.x + (r.w - m.width) / 2.0, r.y + r.h / 2.0 + m.height / 3.0, 18, fg, font);
     click && r.contains(mouse)
