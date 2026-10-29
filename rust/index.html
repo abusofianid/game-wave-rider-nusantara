@@ -10,11 +10,13 @@
     <title>Wave Rider Nusantara — Rust</title>
     <style>
       :root { color-scheme: dark; }
-      *, *::before, *::after { box-sizing: border-box; }\n      body { isolation: isolate; }
+      *, *::before, *::after { box-sizing: border-box; }
+      html { position: relative; }
+      body { isolation: isolate; position: relative; }
       html, body { margin: 0; width: 100%; height: 100%; height: 100dvh; overflow: hidden; background: #000; overscroll-behavior: none; }
       body { display: grid; grid-template-rows: minmax(0, 1fr) clamp(96px, 22dvh, 150px); }
       canvas { width: 100%; height: 100%; min-width: 0; min-height: 0; display: block; outline: none; touch-action: none; -webkit-tap-highlight-color: transparent; transform: scaleY(-1); transform-origin: center; image-rendering: auto; }
-      #sound-toggle { position: fixed; z-index: 2147483647; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 104px; min-height: 42px; padding: 9px 12px; border: 1px solid rgba(255,255,255,.72); border-radius: 14px; background: rgba(20,20,20,.76); color: #fff; box-shadow: 0 4px 18px rgba(0,0,0,.3); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); font: 700 12px/1 system-ui, sans-serif; white-space: nowrap; touch-action: manipulation; -webkit-tap-highlight-color: transparent; cursor: pointer; pointer-events: auto; }
+      #sound-toggle { position: fixed !important; z-index: 2147483647 !important; top: max(12px, env(safe-area-inset-top)) !important; right: max(12px, env(safe-area-inset-right)) !important; display: inline-flex !important; align-items: center; justify-content: center; gap: 7px; min-width: 112px; min-height: 46px; padding: 10px 13px; border: 1px solid rgba(255,255,255,.82); border-radius: 14px; background: rgba(18,18,18,.88); color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,.45); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); font: 700 12px/1 system-ui, sans-serif; white-space: nowrap; touch-action: manipulation; -webkit-tap-highlight-color: transparent; cursor: pointer; pointer-events: auto !important; visibility: visible !important; opacity: 1 !important; }
       #game-controls { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; min-height: 0; padding: 3px 8px calc(3px + env(safe-area-inset-bottom)); background: #000; border-top: 1px solid #383838; touch-action: none; }
       #game-controls .control-row { display: flex; justify-content: center; }
       #game-controls button { width: clamp(42px, 12vw, 60px); height: clamp(42px, 12vw, 60px); margin: 1px clamp(3px, 1.2vw, 5px); border-radius: clamp(10px, 2.5vw, 15px); background: rgba(18,18,18,0.9); border: 1.5px solid #fff; color: #fff; font: 700 clamp(19px, 5vw, 24px)/1 system-ui, sans-serif; display: flex; justify-content: center; align-items: center; touch-action: none; -webkit-tap-highlight-color: transparent; user-select: none; padding: 0; transition: background-color 90ms ease-out; }
@@ -115,6 +117,9 @@
         const pause = () => music.pause();
 
         const soundButton = document.getElementById("sound-toggle");
+        // Keep the control above Macroquad canvas on browsers that reset canvas stacking.
+        document.body.appendChild(soundButton);
+        Object.assign(soundButton.style, { position: "fixed", zIndex: "2147483647", display: "inline-flex", visibility: "visible", opacity: "1", pointerEvents: "auto", top: "max(12px, env(safe-area-inset-top))", right: "max(12px, env(safe-area-inset-right))" });
         const updateSoundButton = () => {
           soundButton.querySelector("#sound-label").textContent = muted ? "SOUND OFF" : "SOUND ON";
           soundButton.querySelector("[aria-hidden]").textContent = muted ? "🔇" : "🔊";
