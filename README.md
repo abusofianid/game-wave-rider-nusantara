@@ -59,7 +59,58 @@ See the [Rust README](./rust/README.md) for controls, build requirements, audio 
 
 ## Run the Python version
 
-See the [Python project directory](./python/) for its entry point and dependency instructions.
+The Python version is a desktop game built with **Python and Pyglet**. The entry point is `python/main.py`, and its dependencies are listed in `python/requirements.txt`.
+
+### 1. Install Python
+
+Install a supported Python 3 version from [python.org](https://www.python.org/downloads/). On Windows, enable the option to add Python to PATH if the installer offers it.
+
+### 2. Clone the repository
+
+If you have not cloned the repository yet:
+
+```bash
+git clone https://github.com/abusofianid/game-wave-rider-nusantara.git
+cd game-wave-rider-nusantara
+```
+
+### 3. Create a virtual environment
+
+Run these commands from the repository root:
+
+**Windows (PowerShell):**
+```powershell
+py -m venv .venv
+.venv\Scripts\Activate.ps1
+```
+
+**Linux / macOS:**
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### 4. Install dependencies and launch the game
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install -r python/requirements.txt
+python python/main.py
+```
+
+Run the game from the repository root as shown above so the relative asset paths resolve as expected. If you prefer to work inside the Python project directory, use `cd python`, then install with `python -m pip install -r requirements.txt` and launch with `python main.py`.
+
+### 5. (Optional) Package a Windows executable
+
+The project includes PyInstaller in its requirements. From the `python` directory on Windows, run:
+
+```powershell
+pyinstaller --name WaveRiderNusantara --onefile --windowed --add-data "assets;assets" main.py
+```
+
+The executable is generated in `python/dist/`. Packaging is optional; you can play directly with `python main.py`.
+
+For the full Python project overview and implementation details, see the [Python README](./python/README.md).
 
 ## Assets and licensing
 
