@@ -144,9 +144,14 @@ async fn main() {
         let vh = H * scale;
         let ox = (sw - vw) / 2.0;
         let oy = (sh - vh) / 2.0;
-        let (mx, my) = mouse_position();
+        // Mobile browsers do not consistently synthesize mouse clicks from touch.
+        // Read Macroquad's native touch events as well as mouse input.
+        let touch_start = touches().into_iter().find(|touch| touch.phase == TouchPhase::Started);
+        let (mx, my) = touch_start
+            .map(|touch| (touch.position.x, touch.position.y))
+            .unwrap_or_else(mouse_position);
         let mouse = vec2((mx - ox) / scale, (my - oy) / scale);
-        let click = is_mouse_button_pressed(MouseButton::Left);
+        let click = is_mouse_button_pressed(MouseButton::Left) || touch_start.is_some();
 
         clear_background(BLACK);
         let mut camera = Camera2D::from_display_rect(Rect::new(0.0, 0.0, W, H));
