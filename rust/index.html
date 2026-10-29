@@ -152,17 +152,16 @@
 
           const checks = await Promise.all(requiredFiles.map(async (path) => {
             try {
-              const response = await fetch(path, { method: "GET", cache: "no-store" });
+              const isWasm = path.endsWith(".wasm");
+              const response = await fetch(path, { method: isWasm ? "GET" : "HEAD", cache: "no-store" });
               if (!response.ok) return path + " returned HTTP " + response.status;
-              if (path.endsWith(".wasm")) {
+              if (isWasm) {
                 const bytes = await response.arrayBuffer();
                 if (bytes.byteLength < 8) return path + " is empty or too small (" + bytes.byteLength + " bytes)";
                 const magic = new Uint8Array(bytes.slice(0, 4));
                 if (magic[0] !== 0 || magic[1] !== 97 || magic[2] !== 115 || magic[3] !== 109) {
                   return path + " did not return a valid WebAssembly file";
                 }
-              } else {
-                await response.body?.cancel();
               }
               return null;
             } catch (error) {
@@ -180,22 +179,28 @@
           }
           message.textContent = "All required files responded successfully. Starting the Rust WebAssembly game…";
           status.dataset.phase = "starting";
-          load("./wave_rider_nusantara.wasm");
-
-          // Keep the overlay until the game canvas has actually rendered pixels.
+          // Capture the context Macroquad itself requests. Never create a context
+          // here: getContext() fixes the canvas to that type, so asking for WebGL2
+          // first can make Macroquad's WebGL1 initialization fail.
           const canvas = document.getElementById("glcanvas");
           let renderContext = null;
           let renderDetected = false;
+          const originalGetContext = canvas.getContext.bind(canvas);
+          canvas.getContext = (type, ...args) => {
+            const context = originalGetContext(type, ...args);
+            if (context && (type === "webgl" || type === "webgl2")) {
+              renderContext = context;
+            }
+            return context;
+          };
           function detectRenderedFrame() {
             if (renderDetected || status.dataset.phase === "failed") return;
-            try {
-              renderContext = renderContext || canvas.getContext("webgl2") || canvas.getContext("webgl");
-              if (renderContext) {
-                const gl = renderContext;
+            if (renderContext) {
+              try {
                 const pixel = new Uint8Array(4);
                 for (let y = 20; y < canvas.height; y += Math.max(1, Math.floor(canvas.height / 8))) {
                   for (let x = 20; x < canvas.width; x += Math.max(1, Math.floor(canvas.width / 8))) {
-                    gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+                    renderContext.readPixels(x, y, 1, 1, renderContext.RGBA, renderContext.UNSIGNED_BYTE, pixel);
                     if (pixel[0] > 24 || pixel[1] > 24 || pixel[2] > 24) {
                       renderDetected = true;
                       status.dataset.phase = "running";
@@ -204,12 +209,13 @@
                     }
                   }
                 }
+              } catch (error) {
+                // Keep diagnostics visible if pixel readback is unavailable.
               }
-            } catch (error) {
-              // Keep diagnostics visible if pixel readback is unavailable.
             }
             window.requestAnimationFrame(detectRenderedFrame);
           }
+          load("./wave_rider_nusantara.wasm");
           window.requestAnimationFrame(detectRenderedFrame);
         } catch (error) {
           showFailure("Could not start WebAssembly", error && error.message ? error.message : String(error));
