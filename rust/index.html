@@ -26,6 +26,7 @@
         let failed = false;
         function showError(title, detail) {
           failed = true;
+          status.dataset.phase = "failed";
           status.dataset.failed = "true";
           status.hidden = false;
           status.innerHTML = "";
@@ -75,6 +76,7 @@
       (async () => {
         const status = document.getElementById("startup-status");
         const showFailure = (title, detail) => {
+          status.dataset.phase = "failed";
           status.dataset.failed = "true";
           status.dataset.phase = "failed";
           status.hidden = false;
