@@ -2,18 +2,74 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
     <title>Wave Rider Nusantara — Rust</title>
     <style>
       html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
       body { display: grid; place-items: center; }
       canvas { width: 100vw; height: 100vh; display: block; outline: none; }
+      #startup-status { position: fixed; z-index: 5; inset: auto 12px 12px; padding: 12px 14px; border: 1px solid #666; border-radius: 8px; background: #171717; color: #fff; font: 14px/1.45 system-ui, sans-serif; overflow-wrap: anywhere; }
+      #startup-status[hidden] { display: none; }
+      #startup-status strong { display: block; margin-bottom: 4px; }
     </style>
   </head>
   <body>
-    <canvas id="glcanvas" tabindex="1"></canvas>
-    <script src="./web/mq_js_bundle.js"></script>
-    <script>load("./web/wave_rider_nusantara.wasm");</script>
+    <canvas id="glcanvas" tabindex="1" aria-label="Wave Rider Nusantara game"></canvas>
+    <div id="startup-status" role="status" aria-live="polite">
+      <strong>Wave Rider Nusantara is starting…</strong>
+      Loading the Rust WebAssembly game. If this message remains, startup may have failed.
+    </div>
+    <script>
+      (() => {
+        const status = document.getElementById("startup-status");
+        let failed = false;
+        function showError(title, detail) {
+          failed = true;
+          status.hidden = false;
+          status.innerHTML = "";
+          const heading = document.createElement("strong");
+          heading.textContent = title;
+          const message = document.createElement("div");
+          message.textContent = detail || "No additional error details were provided.";
+          status.append(heading, message);
+        }
+        window.addEventListener("error", (event) => {
+          showError("Game startup error", event.message || "A script or WebAssembly resource failed to load.");
+        });
+        window.addEventListener("unhandledrejection", (event) => {
+          const reason = event.reason;
+          showError("Game startup error", reason && reason.message ? reason.message : String(reason || "Unhandled promise rejection"));
+        });
+        window.addEventListener("webglcontextcreationerror", (event) => {
+          showError("WebGL is unavailable", event.statusMessage || "This browser or device could not create a WebGL context.");
+        });
+        const canvas = document.getElementById("glcanvas");
+        const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+        if (!gl) {
+          showError("WebGL is unavailable", "Firefox could not create a WebGL context. Check Firefox settings, device graphics support, and hardware acceleration.");
+        }
+        window.addEventListener("load", () => {
+          window.setTimeout(() => {
+            if (!failed && !status.hidden) {
+              showError("The game has not finished starting", "The page loaded, but the game did not report a startup error. This can indicate a WebAssembly, graphics-driver, or asset-loading problem.");
+            }
+          }, 12000);
+        });
+      })();
+    </script>
+    <script src="./mq_js_bundle.js" onerror="document.getElementById('startup-status').hidden=false;document.getElementById('startup-status').textContent='Could not load the Macroquad JavaScript loader (mq_js_bundle.js).';"></script>
+    <script>
+      try {
+        if (typeof load !== "function") {
+          throw new Error("Macroquad loader did not initialize: load() is missing.");
+        }
+        load("./wave_rider_nusantara.wasm");
+      } catch (error) {
+        const status = document.getElementById("startup-status");
+        status.hidden = false;
+        status.textContent = "Could not start WebAssembly: " + (error && error.message ? error.message : String(error));
+      }
+    </script>
   </body>
 </html>
