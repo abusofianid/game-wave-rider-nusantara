@@ -8,7 +8,7 @@
     <style>
       html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
       body { display: grid; place-items: center; }
-      canvas { width: 100vw; height: 100vh; display: block; outline: none; }
+      canvas { width: 100vw; height: 100vh; display: block; outline: none; touch-action: none; -webkit-tap-highlight-color: transparent; }
       #startup-status { position: fixed; z-index: 5; inset: auto 12px 12px; padding: 12px 14px; border: 1px solid #666; border-radius: 8px; background: #171717; color: #fff; font: 14px/1.45 system-ui, sans-serif; overflow-wrap: anywhere; }
       #startup-status[hidden] { display: none; }
       #startup-status strong { display: block; margin-bottom: 4px; }
@@ -16,6 +16,12 @@
   </head>
   <body>
     <canvas id="glcanvas" tabindex="1" aria-label="Wave Rider Nusantara game"></canvas>
+    <script>
+      // Prevent mobile browser gestures from stealing taps intended for the game.
+      document.getElementById("glcanvas").addEventListener("touchstart", (event) => {
+        event.preventDefault();
+      }, { passive: false });
+    </script>
     <div id="startup-status" role="status" aria-live="polite">
       <strong>Wave Rider Nusantara — startup diagnostic build</strong>
       Diagnostic build 82b98c0 is loaded. Waiting for the Rust WebAssembly game to initialize…
@@ -94,8 +100,19 @@
           }
         }
         window.setTimeout(() => {
-          if (!failed && status.dataset.phase !== "running" && !status.hidden) {
-            const canvas = document.getElementById("glcanvas");
+          if (failed || status.hidden) return;
+          const canvas = document.getElementById("glcanvas");
+          const hasMacroquadContext = Boolean(window.__macroquadWebGLContext && window.__macroquadWebGLContext.endsWith(" available"));
+          const canvasResized = canvas.width > 300 || canvas.height > 150;
+          // Some WebGL implementations bypass the prototype draw-call observer.
+          // A live Macroquad context and resized drawing buffer should not be
+          // reported as a fatal startup timeout (the menu may already be visible).
+          if (hasMacroquadContext && canvasResized) {
+            status.dataset.phase = "running";
+            status.hidden = true;
+            return;
+          }
+          if (status.dataset.phase !== "running") {
             const detail = [
               "The page loaded, but the game did not finish initializing within 12 seconds.",
               "WASM stage: " + wasmStage + ".",
