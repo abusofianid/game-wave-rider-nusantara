@@ -60,10 +60,10 @@ async fn texture(path: &str) -> Texture2D {
     t.set_filter(FilterMode::Linear);
     t
 }
-async fn assets() -> Assets {
-    // Start all network asset requests together to avoid serial round-trip latency.
-    let (bg, idle1, idle2, hit, collect, bomb, batik1, batik2, batik3, batik4, font) = futures::join!(
-        texture("assets/images/bg.webp"),
+async fn assets(bg: Texture2D, font: Font) -> Assets {
+    // Load gameplay-only sprites in parallel after the background and menu font
+    // have already been displayed. This reduces the perceived startup delay.
+    let (idle1, idle2, hit, collect, bomb, batik1, batik2, batik3, batik4) = futures::join!(
         texture("assets/images/gatot-1.webp"),
         texture("assets/images/gatot-2.webp"),
         texture("assets/images/gatot-hit.webp"),
@@ -73,12 +73,11 @@ async fn assets() -> Assets {
         texture("assets/images/collect-2.webp"),
         texture("assets/images/collect-3.webp"),
         texture("assets/images/collect-4.webp"),
-        load_ttf_font("assets/fonts/OpenSans-SemiBold.ttf"),
     );
     Assets {
         bg, idle: [idle1, idle2], hit, collect, bomb,
         batik: [batik1, batik2, batik3, batik4],
-        font: font.expect("Could not load OpenSans"),
+        font,
     }
 }
 fn collision(ax: f32, ay: f32, aw: f32, ah: f32, bx: f32, by: f32, bw: f32, bh: f32) -> bool {
@@ -142,13 +141,25 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    // Paint a first frame before waiting for image/font downloads, so the
-    // canvas is not blank while the parallel asset requests are in flight.
+    // Prioritize the background and menu font so users see the game scene
+    // before gameplay-only sprites finish downloading.
+    let (bg, font) = futures::join!(
+        texture("assets/images/bg.webp"),
+        load_ttf_font("assets/fonts/OpenSans-SemiBold.ttf"),
+    );
+    let font = font.expect("Could not load OpenSans");
     clear_background(BLACK);
-    draw_text("Loading Wave Rider Nusantara...", 24.0, 48.0, 24.0, WHITE);
+    draw_texture_ex(&bg, 0.0, 0.0, WHITE, DrawTextureParams {
+        dest_size: Some(vec2(W, H)),
+        ..Default::default()
+    });
+    let loading = "Loading Wave Rider Nusantara...";
+    let loading_metrics = measure_text(loading, Some(&font), 24, 1.0);
+    draw_text_ex(loading, (W - loading_metrics.width) / 2.0, H / 2.0,
+        TextParams { font: Some(&font), font_size: 24, color: WHITE, ..Default::default() });
     next_frame().await;
 
-    let a = assets().await;
+    let a = assets(bg, font).await;
     let scale_player = (TARGET_SIZE / a.idle[0].width()).min(TARGET_SIZE / a.idle[0].height());
     let mut player = Player::new(a.idle[0].width() * scale_player, a.idle[0].height() * scale_player);
     let mut state = GameState::Menu;
