@@ -21,7 +21,7 @@ fi
 cargo install wasm-bindgen-cli --version "$WB_VERSION" --locked
 wasm-bindgen target/wasm32-unknown-unknown/release/wave_rider_nusantara.wasm --out-dir web --target web --no-typescript
 
-cp index.html web/index.html
+sed 's#./web/wave_rider_nusantara.js#./wave_rider_nusantara.js#' index.html > web/index.html
 mkdir -p web/assets/audio
 cp -r assets/images assets/fonts web/assets/
 cp assets/audio/bg-sound.ogg web/assets/audio/
