@@ -57,13 +57,16 @@
         if (!gl) {
           showError("WebGL is unavailable", "Firefox could not create a WebGL context. Check Firefox settings, device graphics support, and hardware acceleration.");
         }
-        window.addEventListener("load", () => {
-          window.setTimeout(() => {
-            if (!failed) {
-              status.hidden = true;
-            }
-          }, 12000);
-        });
+        // Start the watchdog immediately. Waiting for the window "load" event can
+        // leave the original message stuck if the loader stalls before that event.
+        window.setTimeout(() => {
+          if (!failed && !status.hidden) {
+            showError(
+              "WebAssembly startup timed out",
+              "The page loaded, but the game did not finish initializing within 12 seconds. Check whether wave_rider_nusantara.wasm and the assets under assets/ load successfully, and whether the browser supports WebGL."
+            );
+          }
+        }, 12000);
       })();
     </script>
     <script src="./mq_js_bundle.js" onerror="document.getElementById('startup-status').hidden=false;document.getElementById('startup-status').textContent='Could not load the Macroquad JavaScript loader (mq_js_bundle.js).';"></script>
