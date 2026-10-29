@@ -132,8 +132,13 @@ async fn main() {
     let mut speed = 1.0_f32;
     let mut language = 1_usize;
     let mut muted = false;
+    // Preload audio before the start gesture. Awaiting load_sound inside the tap
+    // handler can lose the browser's transient user activation and leave WebAudio muted.
+    let music: Option<Sound> = match load_sound("assets/audio/bg-sound.ogg").await {
+        Ok(sound) => Some(sound),
+        Err(error) => { eprintln!("Background audio failed to load: {error}"); None }
+    };
     let mut music_started = false;
-    let mut music: Option<Sound> = None;
 
     loop {
         let dt = get_frame_time().min(0.05);
@@ -258,11 +263,10 @@ async fn main() {
                     Color::new(0.16, 0.65, 0.27, 1.0), &a.font, mouse, click) || is_key_pressed(KeyCode::Space) {
                     state = GameState::Playing;
                     if !music_started {
-                        music_started = true;
-                        // Load audio only after the user gesture; failure should not block gameplay.
-                        if let Ok(sound) = load_sound("assets/audio/bg-sound.ogg").await {
-                            play_sound(&sound, PlaySoundParams { looped: true, volume: if muted { 0.0 } else { 0.05 } });
-                            music = Some(sound);
+                        // Start the already-loaded sound directly in the user's tap handler.
+                        if let Some(sound) = music.as_ref() {
+                            play_sound(sound, PlaySoundParams { looped: true, volume: if muted { 0.0 } else { 0.05 } });
+                            music_started = true;
                         }
                     }
                 }
@@ -276,15 +280,26 @@ async fn main() {
                     state = if state == GameState::Playing { GameState::Paused } else { GameState::Playing };
                 }
                 if sw < 800.0 {
-                    for (r, glyph) in [
-                        (Rect::new(38.0, 500.0, 58.0, 58.0), "←"),
-                        (Rect::new(154.0, 500.0, 58.0, 58.0), "→"),
-                        (Rect::new(96.0, 442.0, 58.0, 58.0), "↑"),
-                        (Rect::new(96.0, 500.0, 58.0, 58.0), "↓"),
+                    for (r, direction) in [
+                        (Rect::new(38.0, 500.0, 58.0, 58.0), 0_u8),
+                        (Rect::new(154.0, 500.0, 58.0, 58.0), 1_u8),
+                        (Rect::new(96.0, 442.0, 58.0, 58.0), 2_u8),
+                        (Rect::new(96.0, 500.0, 58.0, 58.0), 3_u8),
                     ] {
-                        draw_rectangle(r.x, r.y, r.w, r.h, Color::new(0.0, 0.0, 0.0, 0.58));
+                        draw_rectangle(r.x, r.y, r.w, r.h, Color::new(0.0, 0.0, 0.0, 0.68));
                         draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, WHITE);
-                        text(glyph, r.x + 17.0, r.y + 38.0, 24, WHITE, &a.font);
+                        // Draw arrows as vector geometry; OpenSans does not guarantee arrow glyphs.
+                        let cx = r.x + r.w / 2.0;
+                        let cy = r.y + r.h / 2.0;
+                        let (start, end, head_a, head_b) = match direction {
+                            0 => (vec2(cx + 11.0, cy), vec2(cx - 11.0, cy), vec2(cx - 3.0, cy - 8.0), vec2(cx - 3.0, cy + 8.0)),
+                            1 => (vec2(cx - 11.0, cy), vec2(cx + 11.0, cy), vec2(cx + 3.0, cy - 8.0), vec2(cx + 3.0, cy + 8.0)),
+                            2 => (vec2(cx, cy + 11.0), vec2(cx, cy - 11.0), vec2(cx - 8.0, cy - 3.0), vec2(cx + 8.0, cy - 3.0)),
+                            _ => (vec2(cx, cy - 11.0), vec2(cx, cy + 11.0), vec2(cx - 8.0, cy + 3.0), vec2(cx + 8.0, cy + 3.0)),
+                        };
+                        draw_line(start.x, start.y, end.x, end.y, 4.0, WHITE);
+                        draw_line(end.x, end.y, head_a.x, head_a.y, 4.0, WHITE);
+                        draw_line(end.x, end.y, head_b.x, head_b.y, 4.0, WHITE);
                     }
                 }
                 if state == GameState::Paused {
