@@ -34,7 +34,18 @@
           message.textContent = detail || "No additional error details were provided.";
           status.append(heading, message);
         }
+        const originalConsoleError = console.error.bind(console);
+        console.error = (...args) => {
+          originalConsoleError(...args);
+          const detail = args.map((value) => {
+            try { return typeof value === "string" ? value : JSON.stringify(value); }
+            catch { return String(value); }
+          }).join(" ");
+          if (/panicked at|panicked:|panicked with/i.test(detail)) showError("Rust panic details", detail);
+        };
         window.addEventListener("error", (event) => {
+          const heading = status.querySelector("strong");
+          if (heading && heading.textContent === "Rust panic details") return;
           showError("Game startup error", event.message || "A script or WebAssembly resource failed to load.");
         });
         window.addEventListener("unhandledrejection", (event) => {
