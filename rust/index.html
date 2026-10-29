@@ -127,8 +127,12 @@
           soundButton.style.display = "flex";
           soundButton.style.left = `${rect.left + offsetX + 670 * scale}px`;
           soundButton.style.top = `${rect.top + offsetY + 18 * scale}px`;
-          soundButton.style.transform = `scale(${Math.min(1, scale)})`;
-          soundButton.style.transformOrigin = "top left";
+          soundButton.style.width = `${112 * scale}px`;
+          soundButton.style.height = `${34 * scale}px`;
+          soundButton.style.minWidth = "0";
+          soundButton.style.minHeight = "0";
+          soundButton.style.padding = `${5 * scale}px ${7 * scale}px`;
+          soundButton.style.fontSize = `${Math.max(9, 18 * scale)}px`;
         };
         const updateSoundButton = () => {
           soundButton.textContent = muted ? "SOUND OFF" : "SOUND ON";
