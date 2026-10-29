@@ -116,7 +116,8 @@
 
         const soundButton = document.getElementById("sound-toggle");
         const updateSoundButton = () => {
-          soundButton.querySelector("#sound-label").textContent = muted ? "SOUND OFF" : "SOUND ON";\n          soundButton.querySelector("[aria-hidden]").textContent = muted ? "🔇" : "🔊";
+          soundButton.querySelector("#sound-label").textContent = muted ? "SOUND OFF" : "SOUND ON";
+          soundButton.querySelector("[aria-hidden]").textContent = muted ? "🔇" : "🔊";
           soundButton.setAttribute("aria-pressed", String(muted));
           music.muted = muted;
         };
