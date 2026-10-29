@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    <link rel="preload" href="./wave_rider_nusantara.wasm" as="fetch" type="application/wasm" crossorigin>
+    <link rel="preload" href="./assets/images/bg.webp" as="image" type="image/webp">
+    <link rel="preload" href="./assets/fonts/OpenSans-SemiBold.ttf" as="font" type="font/ttf" crossorigin>
+    <title>Wave Rider Nusantara — Rust</title>
+    <style>
+      :root { color-scheme: dark; }
+      *, *::before, *::after { box-sizing: border-box; }
+      html { position: relative; }
+      body { isolation: isolate; position: relative; }
+      html, body { margin: 0; width: 100%; height: 100%; height: 100dvh; overflow: hidden; background: #000; overscroll-behavior: none; }
+      body { display: grid; grid-template-rows: minmax(0, 1fr) clamp(96px, 22dvh, 150px); }
+      canvas { width: 100%; height: 100%; min-width: 0; min-height: 0; display: block; outline: none; touch-action: none; -webkit-tap-highlight-color: transparent; transform: scaleY(-1); transform-origin: center; image-rendering: auto; }
+      #sound-toggle { position: fixed !important; z-index: 2147483647 !important; top: max(12px, env(safe-area-inset-top)) !important; right: max(12px, env(safe-area-inset-right)) !important; display: inline-flex !important; align-items: center; justify-content: center; gap: 7px; min-width: 112px; min-height: 46px; padding: 10px 13px; border: 1px solid rgba(255,255,255,.82); border-radius: 14px; background: rgba(18,18,18,.88); color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,.45); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); font: 700 12px/1 system-ui, sans-serif; white-space: nowrap; touch-action: manipulation; -webkit-tap-highlight-color: transparent; cursor: pointer; pointer-events: auto !important; visibility: visible !important; opacity: 1 !important; }
+      #game-controls { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; min-height: 0; padding: 3px 8px calc(3px + env(safe-area-inset-bottom)); background: #000; border-top: 1px solid #383838; touch-action: none; }
+      #game-controls .control-row { display: flex; justify-content: center; }
+      #game-controls button { width: clamp(42px, 12vw, 60px); height: clamp(42px, 12vw, 60px); margin: 1px clamp(3px, 1.2vw, 5px); border-radius: clamp(10px, 2.5vw, 15px); background: rgba(18,18,18,0.9); border: 1.5px solid #fff; color: #fff; font: 700 clamp(19px, 5vw, 24px)/1 system-ui, sans-serif; display: flex; justify-content: center; align-items: center; touch-action: none; -webkit-tap-highlight-color: transparent; user-select: none; padding: 0; transition: background-color 90ms ease-out; }
+      #game-controls button:active { background: rgba(255,255,255,0.28); }
+      @media (max-height: 500px) and (orientation: landscape) {
+        body { grid-template-rows: minmax(0, 1fr) 84px; }
+        #game-controls { flex-direction: row; gap: 8px; padding: 2px 8px calc(2px + env(safe-area-inset-bottom)); }
+        #game-controls .control-row { align-items: center; }
+        #game-controls button { width: clamp(34px, 8vh, 46px); height: clamp(34px, 8vh, 46px); margin: 1px 3px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #game-controls button { transition: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="glcanvas" tabindex="1" aria-label="Wave Rider Nusantara game"></canvas>
+    <button id="sound-toggle" type="button" aria-label="Toggle game sound" aria-pressed="false"><span aria-hidden="true">🔊</span><span id="sound-label">SOUND ON</span></button>
+    <nav id="game-controls" aria-label="Game movement controls">
+      <button type="button" data-key="ArrowUp" data-key-code="38" aria-label="Move up">↑</button>
+      <div class="control-row">
+        <button type="button" data-key="ArrowLeft" data-key-code="37" aria-label="Move left">←</button>
+        <button type="button" data-key="ArrowDown" data-key-code="40" aria-label="Move down">↓</button>
+        <button type="button" data-key="ArrowRight" data-key-code="39" aria-label="Move right">→</button>
+      </div>
+    </nav>
+    <script>
+      // Forward held D-pad presses to Macroquad's keyboard input path.
+      (() => {
+        const controls = document.getElementById("game-controls");
+        const canvas = document.getElementById("glcanvas");
+        const activeKeys = new Set();
+        const emit = (button, type) => {
+          const key = button.dataset.key;
+          const keyCode = Number(button.dataset.keyCode);
+          canvas.dispatchEvent(new KeyboardEvent(type, {
+            key, code: key, keyCode, which: keyCode, bubbles: true, cancelable: true
+          }));
+        };
+        const release = (button) => {
+          const key = button.dataset.key;
+          if (!key || !activeKeys.has(key)) return;
+          activeKeys.delete(key);
+          emit(button, "keyup");
+        };
+        controls.querySelectorAll("button[data-key]").forEach((button) => {
+          button.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            const key = button.dataset.key;
+            if (!activeKeys.has(key)) {
+              activeKeys.add(key);
+              emit(button, "keydown");
+            }
+            try { button.setPointerCapture(event.pointerId); } catch {}
+          });
+          button.addEventListener("pointerup", () => release(button));
+          button.addEventListener("pointerleave", () => release(button));
+          button.addEventListener("pointercancel", () => release(button));
+          button.addEventListener("lostpointercapture", () => release(button));
+          button.addEventListener("contextmenu", (event) => event.preventDefault());
+        });
+        window.addEventListener("blur", () => controls.querySelectorAll("button[data-key]").forEach(release));
+      })();
+    </script>
+    <script src="./mq_js_bundle.js"></script>
+    <script>
+      // Use one native HTMLAudioElement and start it synchronously from a user gesture.
+      (() => {
+        const canvas = document.getElementById("glcanvas");
+        const music = new Audio("./assets/audio/bg-sound.ogg");
+        music.loop = true;
+        // Do not compete with the WASM and visual assets during startup.
+        // The soundtrack is fetched when playback is first requested.
+        music.preload = "none";
+        music.volume = 0.15;
+        let started = false;
+        let paused = false;
+        let muted = false;
+
+        music.addEventListener("error", () => {
+          console.error("[Wave Rider audio] Failed to load OGG soundtrack.", {
+            src: music.currentSrc || music.src,
+            code: music.error?.code,
+            message: music.error?.message
+          });
+        });
+        music.addEventListener("canplay", () => console.info("[Wave Rider audio] OGG is ready to play."));
+        music.addEventListener("playing", () => console.info("[Wave Rider audio] Playback started."));
+        music.addEventListener("pause", () => console.info("[Wave Rider audio] Playback paused."));
+
+        const play = () => {
+          if (muted) return;
+          const promise = music.play();
+          if (promise && typeof promise.catch === "function") {
+            promise.catch((error) => console.error("[Wave Rider audio] Playback rejected:", error.name, error.message));
+          }
+        };
+        const pause = () => music.pause();
+
+        const soundButton = document.getElementById("sound-toggle");
+        // Keep the control above Macroquad canvas on browsers that reset canvas stacking.
+        document.body.appendChild(soundButton);
+        Object.assign(soundButton.style, { position: "fixed", zIndex: "2147483647", display: "inline-flex", visibility: "visible", opacity: "1", pointerEvents: "auto", top: "max(12px, env(safe-area-inset-top))", right: "max(12px, env(safe-area-inset-right))" });
+        const updateSoundButton = () => {
+          soundButton.querySelector("#sound-label").textContent = muted ? "SOUND OFF" : "SOUND ON";
+          soundButton.querySelector("[aria-hidden]").textContent = muted ? "🔇" : "🔊";
+          soundButton.setAttribute("aria-pressed", String(muted));
+          music.muted = muted;
+        };
+        const startAudio = () => {
+          if (!started) { started = true; paused = false; }
+          if (!muted && !paused) play();
+        };
+        const toggleMute = () => {
+          muted = !muted;
+          updateSoundButton();
+
+          if (muted) {
+            // Pause immediately as well as setting muted. This avoids audio
+            // continuing on browsers with delayed mute-state propagation.
+            pause();
+            return;
+          }
+
+          // Unmuting is itself a user gesture, so use it to resume playback.
+          if (!started) {
+            started = true;
+            paused = false;
+          }
+          if (!paused) play();
+        };
+        soundButton.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          toggleMute();
+        });
+        // Mouse activation is available on pointerdown; touch activation is
+        // reliably available on pointerup in mobile browsers.
+        canvas.addEventListener("pointerdown", (event) => {
+          if (event.pointerType === "mouse") startAudio();
+        });
+        canvas.addEventListener("pointerup", startAudio);
+        updateSoundButton();
+        window.addEventListener("keydown", (event) => {
+          if (event.code === "Space" && !started) {
+            started = true;
+            paused = false;
+            play();
+          } else if (event.code === "KeyP" && started) {
+            paused = !paused;
+            if (paused) pause(); else play();
+          } else if (event.code === "KeyM") {
+            toggleMute();
+          } else if (event.code === "KeyR" && started) {
+            started = false;
+            paused = false;
+            pause();
+          }
+        });
+
+        if (typeof load === "function") {
+          load("./wave_rider_nusantara.wasm");
+        } else {
+          console.error("[Wave Rider] Macroquad loader function is unavailable.");
+        }
+      })();
+    </script>
+  </body>
+</html>

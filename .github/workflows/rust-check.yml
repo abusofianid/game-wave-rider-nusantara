@@ -1,0 +1,56 @@
+name: Rust checks and WebAssembly build
+
+on:
+  push:
+    branches: [rust]
+    paths:
+      - "rust/**"
+      - ".github/workflows/rust-check.yml"
+  pull_request:
+    paths:
+      - "rust/**"
+      - ".github/workflows/rust-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Install audio conversion tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Prepare compressed soundtrack
+        run: bash rust/scripts/prepare-audio.sh
+      - name: Check desktop target
+        run: cargo check --manifest-path rust/Cargo.toml
+      - name: Run unit tests
+        run: cargo test --manifest-path rust/Cargo.toml
+      - name: Check WebAssembly target
+        run: cargo check --manifest-path rust/Cargo.toml --target wasm32-unknown-unknown
+      - name: Build optimized WebAssembly
+        run: cargo build --manifest-path rust/Cargo.toml --release --target wasm32-unknown-unknown
+      - name: Assemble static WebAssembly site
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd rust
+          mkdir -p web
+          cp target/wasm32-unknown-unknown/release/wave-rider-nusantara.wasm web/wave_rider_nusantara.wasm
+          curl --proto '=https' --tlsv1.2 -fsSL https://not-fl3.github.io/miniquad-samples/mq_js_bundle.js -o web/mq_js_bundle.js
+          sed 's#./web/#./#g' index.html > web/index.html
+          mkdir -p web/assets/audio
+          cp -r assets/images assets/fonts web/assets/
+          cp assets/audio/bg-sound.ogg web/assets/audio/
+      - name: Upload WebAssembly site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-rider-nusantara-wasm
+          path: rust/web/
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,376 @@
+use macroquad::prelude::*;
+use macroquad::rand::gen_range;
+
+const W: f32 = 800.0;
+const H: f32 = 600.0;
+const BASE_SPEED: f32 = 200.0;
+const PLAYER_SPEED: f32 = 300.0;
+const TARGET_SIZE: f32 = 70.0;
+const HIT_TIME: f32 = 0.3;
+const SPAWN_GAP: f32 = 120.0;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum GameState { Menu, Playing, Paused, GameOver }
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Pose { Idle, Hit, Collect }
+
+struct Player {
+    x: f32, y: f32, w: f32, h: f32,
+    frame: usize, animation_time: f32, pose_time: f32, pose: Pose,
+}
+impl Player {
+    fn new(w: f32, h: f32) -> Self {
+        Self { x: 100.0, y: 300.0, w, h, frame: 0, animation_time: 0.0, pose_time: 0.0, pose: Pose::Idle }
+    }
+    fn reset(&mut self) {
+        let (w, h) = (self.w, self.h);
+        *self = Self::new(w, h);
+    }
+    fn bounds(&self) -> (f32, f32, f32, f32) {
+        (self.x + 10.0, self.y + 10.0, (self.w - 20.0).max(1.0), (self.h - 20.0).max(1.0))
+    }
+    fn react(&mut self, pose: Pose) {
+        self.pose = pose;
+        self.pose_time = HIT_TIME;
+    }
+    fn animate(&mut self, dt: f32) {
+        if self.pose != Pose::Idle {
+            self.pose_time -= dt;
+            if self.pose_time <= 0.0 { self.pose = Pose::Idle; }
+        } else {
+            self.animation_time += dt;
+            if self.animation_time >= 0.15 {
+                self.frame = 1 - self.frame;
+                self.animation_time = 0.0;
+            }
+        }
+    }
+}
+#[derive(Clone, Copy)]
+struct Thing { x: f32, y: f32, w: f32, h: f32 }
+#[derive(Clone, Copy)]
+struct Collectible { thing: Thing, kind: usize }
+
+struct Assets {
+    bg: Texture2D, idle: [Texture2D; 2], hit: Texture2D, collect: Texture2D,
+    bomb: Texture2D, batik: [Texture2D; 4], font: Font,
+}
+async fn texture(path: &str) -> Texture2D {
+    let t = load_texture(path).await.unwrap_or_else(|e| panic!("Could not load {path}: {e}"));
+    t.set_filter(FilterMode::Linear);
+    t
+}
+async fn assets(bg: Texture2D, font: Font) -> Assets {
+    // Load gameplay-only sprites in parallel after the background and menu font
+    // have already been displayed. This reduces the perceived startup delay.
+    let (idle1, idle2, hit, collect, bomb, batik1, batik2, batik3, batik4) = futures::join!(
+        texture("assets/images/gatot-1.webp"),
+        texture("assets/images/gatot-2.webp"),
+        texture("assets/images/gatot-hit.webp"),
+        texture("assets/images/gatot-collect.webp"),
+        texture("assets/images/bomb.webp"),
+        texture("assets/images/collect-1.webp"),
+        texture("assets/images/collect-2.webp"),
+        texture("assets/images/collect-3.webp"),
+        texture("assets/images/collect-4.webp"),
+    );
+    Assets {
+        bg, idle: [idle1, idle2], hit, collect, bomb,
+        batik: [batik1, batik2, batik3, batik4],
+        font,
+    }
+}
+fn collision(ax: f32, ay: f32, aw: f32, ah: f32, bx: f32, by: f32, bw: f32, bh: f32) -> bool {
+    ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by
+}
+fn text(s: &str, x: f32, y: f32, size: u16, color: Color, font: &Font) {
+    draw_text_ex(s, x, y, TextParams { font: Some(font), font_size: size, color, ..Default::default() });
+}
+fn centered_text(s: &str, center_x: f32, y: f32, size: u16, color: Color, font: &Font) {
+    let metrics = measure_text(s, Some(font), size, 1.0);
+    text(s, center_x - metrics.width / 2.0, y, size, color, font);
+}
+fn rounded_fill(r: Rect, radius: f32, color: Color) {
+    let radius = radius.min(r.w * 0.5).min(r.h * 0.5).max(0.0);
+    if radius == 0.0 {
+        draw_rectangle(r.x, r.y, r.w, r.h, color);
+        return;
+    }
+    // Non-overlapping pieces keep translucent glass at a consistent opacity.
+    draw_rectangle(r.x + radius, r.y + radius, r.w - radius * 2.0, r.h - radius * 2.0, color);
+    draw_rectangle(r.x + radius, r.y, r.w - radius * 2.0, radius, color);
+    draw_rectangle(r.x + radius, r.y + r.h - radius, r.w - radius * 2.0, radius, color);
+    draw_rectangle(r.x, r.y + radius, radius, r.h - radius * 2.0, color);
+    draw_rectangle(r.x + r.w - radius, r.y + radius, radius, r.h - radius * 2.0, color);
+    draw_circle(r.x + radius, r.y + radius, radius, color);
+    draw_circle(r.x + r.w - radius, r.y + radius, radius, color);
+    draw_circle(r.x + radius, r.y + r.h - radius, radius, color);
+    draw_circle(r.x + r.w - radius, r.y + r.h - radius, radius, color);
+}
+fn glass(r: Rect, alpha: f32) {
+    rounded_fill(r, 22.0, Color::new(1.0, 1.0, 1.0, alpha));
+}
+fn button(s: &str, r: Rect, active: bool, fill: Color, font: &Font, mouse: Vec2, click: bool) -> bool {
+    let bg = if active { Color::new(0.07, 0.07, 0.07, 0.98) } else { fill };
+    let fg = if active { WHITE } else { Color::new(0.12, 0.12, 0.12, 1.0) };
+    // Draw a rounded border and an inset rounded fill; rectangle_lines would
+    // reintroduce square corners over the glass treatment.
+    rounded_fill(r, 11.0, Color::new(0.85, 0.85, 0.85, 0.95));
+    let inset = if active { 2.0 } else { 1.5 };
+    rounded_fill(
+        Rect::new(r.x + inset, r.y + inset, r.w - inset * 2.0, r.h - inset * 2.0),
+        (11.0 - inset).max(0.0),
+        bg,
+    );
+    let m = measure_text(s, Some(font), 18, 1.0);
+    text(s, r.x + (r.w - m.width) / 2.0, r.y + r.h / 2.0 + m.height / 3.0, 18, fg, font);
+    click && r.contains(mouse)
+}
+fn draw_scene(a: &Assets, p: &Player, bombs: &[Thing], items: &[Collectible], state: GameState) {
+    draw_texture_ex(&a.bg, 0.0, 0.0, WHITE, DrawTextureParams { dest_size: Some(vec2(W, H)), ..Default::default() });
+    if state == GameState::Menu { return; }
+    for item in items {
+        draw_texture_ex(&a.batik[item.kind], item.thing.x, item.thing.y, WHITE,
+            DrawTextureParams { dest_size: Some(vec2(item.thing.w, item.thing.h)), ..Default::default() });
+    }
+    for b in bombs {
+        draw_texture_ex(&a.bomb, b.x, b.y, WHITE, DrawTextureParams { dest_size: Some(vec2(b.w, b.h)), ..Default::default() });
+    }
+    let sprite = match p.pose { Pose::Hit => &a.hit, Pose::Collect => &a.collect, Pose::Idle => &a.idle[p.frame] };
+    draw_texture_ex(sprite, p.x, p.y, WHITE, DrawTextureParams { dest_size: Some(vec2(p.w, p.h)), ..Default::default() });
+}
+fn spawn_clear(x: f32, y: f32, bombs: &[Thing], items: &[Collectible]) -> bool {
+    bombs.iter().all(|b| (b.x - x).abs() > SPAWN_GAP || (b.y - y).abs() > 80.0)
+        && items.iter().all(|i| (i.thing.x - x).abs() > SPAWN_GAP || (i.thing.y - y).abs() > 80.0)
+}
+fn reset(p: &mut Player, bombs: &mut Vec<Thing>, items: &mut Vec<Collectible>, score: &mut u32, lives: &mut u8, speed: &mut f32) {
+    p.reset(); bombs.clear(); items.clear(); *score = 0; *lives = 3; *speed = 1.0;
+}
+
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "Wave Rider Nusantara".to_owned(),
+        window_width: W as i32,
+        window_height: H as i32,
+        // Keep Macroquad's logical screen dimensions aligned with CSS pixels.
+        // High-DPI is intentionally disabled until viewport and pointer scaling
+        // are handled in physical-pixel coordinates; otherwise the game shrinks.
+        high_dpi: false,
+        // Enable multisample antialiasing for cleaner vector UI edges.
+        sample_count: 4,
+        ..Default::default()
+    }
+}
+
+#[macroquad::main(window_conf)]
+async fn main() {
+    // Prioritize the background and menu font so users see the game scene
+    // before gameplay-only sprites finish downloading.
+    let (bg, font) = futures::join!(
+        texture("assets/images/bg.webp"),
+        load_ttf_font("assets/fonts/OpenSans-SemiBold.ttf"),
+    );
+    let font = font.expect("Could not load OpenSans");
+    // Show the actual game menu in the very first frame. Gameplay-only sprites
+    // can take longer to download on mobile, so do not leave a loading message
+    // on screen while those non-critical assets are fetched.
+    clear_background(BLACK);
+    draw_texture_ex(&bg, 0.0, 0.0, WHITE, DrawTextureParams {
+        dest_size: Some(vec2(W, H)),
+        ..Default::default()
+    });
+    draw_rectangle(0.0, 0.0, W, H, Color::new(0.0, 0.0, 0.0, 0.24));
+    glass(Rect::new(140.0, 105.0, 520.0, 390.0), 0.86);
+    centered_text("Penunggang Gelombang Nusantara", 400.0, 165.0, 27, BLACK, &font);
+    centered_text("Dibuat oleh Abu Sofian", 400.0, 191.0, 14, Color::new(0.04, 0.04, 0.04, 1.0), &font);
+    glass(Rect::new(275.0, 214.0, 250.0, 40.0), 0.4);
+    centered_text("English       Indonesia", 400.0, 239.0, 16, BLACK, &font);
+    centered_text("Bantu Gatotkaca menangkap Pola Batik, hindari BOM!", 400.0, 294.0, 14, Color::new(0.04, 0.04, 0.04, 1.0), &font);
+    centered_text("SPASI mulai • PANAH/WASD bergerak • P untuk jeda", 400.0, 322.0, 13, Color::new(0.04, 0.04, 0.04, 1.0), &font);
+    glass(Rect::new(300.0, 372.0, 200.0, 54.0), 0.9);
+    centered_text("MULAI", 400.0, 405.0, 22, BLACK, &font);
+    next_frame().await;
+
+    let a = assets(bg, font).await;
+    let scale_player = (TARGET_SIZE / a.idle[0].width()).min(TARGET_SIZE / a.idle[0].height());
+    let mut player = Player::new(a.idle[0].width() * scale_player, a.idle[0].height() * scale_player);
+    let mut state = GameState::Menu;
+    // Reserve room for typical active objects to reduce allocation churn during play.
+    let mut bombs = Vec::<Thing>::with_capacity(32);
+    let mut items = Vec::<Collectible>::with_capacity(32);
+    let mut score = 0_u32;
+    let mut lives = 3_u8;
+    let mut speed = 1.0_f32;
+    let mut language = 1_usize;
+
+    loop {
+        let dt = get_frame_time().min(0.05);
+        let sw = screen_width().max(1.0);
+        let sh = screen_height().max(1.0);
+        let scale = (sw / W).min(sh / H);
+        let vw = W * scale;
+        let vh = H * scale;
+        let ox = (sw - vw) / 2.0;
+        let oy = (sh - vh) / 2.0;
+        // Read both new touch presses and held touches. Mobile browsers do not
+        // consistently synthesize mouse events for a canvas.
+        let active_touches = touches();
+        let touch_start = active_touches.iter().find(|touch| touch.phase == TouchPhase::Started);
+        let touch_position = active_touches.iter().find(|touch| matches!(
+            touch.phase, TouchPhase::Started | TouchPhase::Moved | TouchPhase::Stationary
+        ));
+        let touch_click = touch_start.is_some();
+        let (mx, raw_my) = touch_position
+            .map(|touch| (touch.position.x, touch.position.y))
+            .unwrap_or_else(mouse_position);
+        let click = is_mouse_button_pressed(MouseButton::Left) || touch_click;
+
+        clear_background(BLACK);
+        // Keep Macroquad's default display-rect Y orientation: its negative Y
+        // zoom maps the top-left-origin game coordinates to WebGL correctly.
+        // Forcing zoom.y positive flips the entire scene vertically.
+        let mut camera = Camera2D::from_display_rect(Rect::new(0.0, 0.0, W, H));
+        camera.viewport = Some((ox as i32, oy as i32, vw as i32, vh as i32));
+        set_camera(&camera);
+        // Use the active camera to map pointer coordinates into game space.
+        // This keeps input aligned with the letterboxed viewport on mobile.
+        // The CSS canvas is vertically flipped for WebGL presentation.
+        let mouse = camera.screen_to_world(vec2(mx, sh - raw_my));
+
+        if is_key_pressed(KeyCode::P) {
+            state = match state { GameState::Playing => GameState::Paused, GameState::Paused => GameState::Playing, other => other };
+        }
+        if is_key_pressed(KeyCode::R) && state == GameState::GameOver {
+            reset(&mut player, &mut bombs, &mut items, &mut score, &mut lives, &mut speed);
+            state = GameState::Menu;
+        }
+
+        if state == GameState::Playing {
+            speed += 0.03 * dt;
+            let scroll = BASE_SPEED * speed;
+            let mut dx = 0.0;
+            let mut dy = 0.0;
+            if is_key_down(KeyCode::Left) || is_key_down(KeyCode::A) { dx -= PLAYER_SPEED * dt; }
+            if is_key_down(KeyCode::Right) || is_key_down(KeyCode::D) { dx += PLAYER_SPEED * dt; }
+            if is_key_down(KeyCode::Up) || is_key_down(KeyCode::W) { dy -= PLAYER_SPEED * dt; }
+            if is_key_down(KeyCode::Down) || is_key_down(KeyCode::S) { dy += PLAYER_SPEED * dt; }
+            player.x = (player.x + dx).clamp(0.0, W - player.w);
+            player.y = (player.y + dy).clamp(0.0, H - player.h);
+            player.animate(dt);
+
+            let (px, py, pw, ph) = player.bounds();
+            for i in (0..bombs.len()).rev() {
+                bombs[i].x -= scroll * dt;
+                let b = bombs[i];
+                if b.x < -100.0 { bombs.remove(i); continue; }
+                if player.pose == Pose::Idle && collision(px, py, pw, ph, b.x, b.y, b.w, b.h) {
+                    lives = lives.saturating_sub(1);
+                    player.react(Pose::Hit);
+                    bombs.remove(i);
+                    if lives == 0 { state = GameState::GameOver; }
+                }
+            }
+            for i in (0..items.len()).rev() {
+                items[i].thing.x -= scroll * dt;
+                let item = items[i];
+                if item.thing.x < -100.0 { items.remove(i); continue; }
+                if collision(px, py, pw, ph, item.thing.x, item.thing.y, item.thing.w, item.thing.h) {
+                    score = score.saturating_add(10);
+                    player.react(Pose::Collect);
+                    items.remove(i);
+                }
+            }
+
+            let frame_scale = dt * 60.0;
+            if gen_range(0.0_f32, 1.0_f32) < 0.02 * frame_scale {
+                let size = gen_range(50.0_f32, 80.0_f32);
+                let (x, y) = (W + 50.0, gen_range(50.0_f32, H - 100.0));
+                if spawn_clear(x, y, &bombs, &items) { bombs.push(Thing { x, y, w: size, h: size }); }
+            }
+            if gen_range(0.0_f32, 1.0_f32) < 0.015 * frame_scale {
+                let size = gen_range(40.0_f32, 60.0_f32);
+                let (x, y) = (W + 50.0, gen_range(50.0_f32, H - 100.0));
+                if spawn_clear(x, y, &bombs, &items) {
+                    items.push(Collectible { thing: Thing { x, y, w: size, h: size }, kind: gen_range(0_usize, 4_usize) });
+                }
+            }
+        }
+
+
+        draw_scene(&a, &player, &bombs, &items, state);
+        let en = language == 0;
+        let dark = Color::new(0.04, 0.04, 0.04, 1.0);
+        let translucent = Color::new(1.0, 1.0, 1.0, 0.4);
+
+        match state {
+            GameState::Menu => {
+                draw_rectangle(0.0, 0.0, W, H, Color::new(0.0, 0.0, 0.0, 0.24));
+                glass(Rect::new(140.0, 105.0, 520.0, 390.0), 0.86);
+                centered_text(if en { "Wave Rider Nusantara" } else { "Penunggang Gelombang Nusantara" },
+                    400.0, 165.0, 27, BLACK, &a.font);
+                centered_text(if en { "Created by Abu Sofian" } else { "Dibuat oleh Abu Sofian" }, 400.0, 191.0, 14, dark, &a.font);
+                if button("English", Rect::new(275.0, 214.0, 120.0, 40.0), en, translucent, &a.font, mouse, click) { language = 0; }
+                if button("Indonesia", Rect::new(405.0, 214.0, 120.0, 40.0), !en, translucent, &a.font, mouse, click) { language = 1; }
+                centered_text(if en { "Help Gatotkaca catch Batik Patterns, avoid BOMBS!" } else { "Bantu Gatotkaca menangkap Pola Batik, hindari BOM!" },
+                    400.0, 294.0, 14, dark, &a.font);
+                centered_text(if en { "SPACE to start • ARROWS/WASD to move • P to pause" } else { "SPASI mulai • PANAH/WASD bergerak • P untuk jeda" },
+                    400.0, 322.0, 13, dark, &a.font);
+                if button(if en { "START" } else { "MULAI" }, Rect::new(300.0, 372.0, 200.0, 54.0), true,
+                    Color::new(0.16, 0.65, 0.27, 1.0), &a.font, mouse, click) || is_key_pressed(KeyCode::Space) {
+                    state = GameState::Playing;
+                }
+            }
+            GameState::Playing | GameState::Paused => {
+                glass(Rect::new(18.0, 16.0, 174.0, 76.0), 0.4);
+                text(&format!("{}: {score}", if en { "Score" } else { "Skor" }), 32.0, 45.0, 18, BLACK, &a.font);
+                text(&format!("{}: {lives}", if en { "Lives" } else { "Nyawa" }), 32.0, 73.0, 18, BLACK, &a.font);
+                if button(if state == GameState::Paused { if en { "RESUME" } else { "LANJUT" } } else { if en { "PAUSE" } else { "JEDA" } },
+                    Rect::new(570.0, 18.0, 88.0, 34.0), state == GameState::Paused, translucent, &a.font, mouse, click) {
+                    state = if state == GameState::Playing { GameState::Paused } else { GameState::Playing };
+                }
+                // Mobile controls are rendered in the HTML control strip below the canvas.
+                if state == GameState::Paused {
+                    draw_rectangle(0.0, 0.0, W, H, Color::new(0.0, 0.0, 0.0, 0.45));
+                    glass(Rect::new(210.0, 205.0, 380.0, 190.0), 0.88);
+                    text(if en { "Paused" } else { "Dijeda" }, 340.0, 248.0, 30, BLACK, &a.font);
+                    text(if en { "Press P or Resume to continue" } else { "Tekan P atau LANJUT untuk bermain" }, 255.0, 282.0, 14, dark, &a.font);
+                    if button(if en { "RESUME" } else { "LANJUT" }, Rect::new(250.0, 320.0, 140.0, 44.0), true, translucent, &a.font, mouse, click) { state = GameState::Playing; }
+                    if button(if en { "RESTART" } else { "ULANGI" }, Rect::new(410.0, 320.0, 140.0, 44.0), false, translucent, &a.font, mouse, click) {
+                        reset(&mut player, &mut bombs, &mut items, &mut score, &mut lives, &mut speed);
+                        state = GameState::Menu;
+                    }
+                }
+            }
+            GameState::GameOver => {
+                draw_rectangle(0.0, 0.0, W, H, Color::new(0.0, 0.0, 0.0, 0.48));
+                glass(Rect::new(210.0, 190.0, 380.0, 220.0), 0.90);
+                text(if en { "Game Over!" } else { "Permainan Berakhir!" }, 295.0, 238.0, 30, BLACK, &a.font);
+                text(&format!("{}: {score}", if en { "Final score" } else { "Skor akhir" }), 335.0, 275.0, 18, dark, &a.font);
+                if button(if en { "RESTART" } else { "ULANGI" }, Rect::new(250.0, 320.0, 140.0, 44.0), true, translucent, &a.font, mouse, click) {
+                    reset(&mut player, &mut bombs, &mut items, &mut score, &mut lives, &mut speed);
+                    state = GameState::Menu;
+                }
+                if button("MENU", Rect::new(410.0, 320.0, 140.0, 44.0), false, translucent, &a.font, mouse, click) {
+                    reset(&mut player, &mut bombs, &mut items, &mut score, &mut lives, &mut speed);
+                    state = GameState::Menu;
+                }
+            }
+        }
+
+        set_default_camera();
+        next_frame().await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::collision;
+    #[test]
+    fn overlapping_rectangles_collide() {
+        assert!(collision(0.0, 0.0, 10.0, 10.0, 5.0, 5.0, 10.0, 10.0));
+    }
+    #[test]
+    fn separated_rectangles_do_not_collide() {
+        assert!(!collision(0.0, 0.0, 10.0, 10.0, 20.0, 20.0, 10.0, 10.0));
+    }
+}

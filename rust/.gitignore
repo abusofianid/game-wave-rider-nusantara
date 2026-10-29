@@ -1,0 +1,3 @@
+/target/
+/web/*.wasm
+/web/*.js
