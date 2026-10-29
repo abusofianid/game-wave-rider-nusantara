@@ -118,11 +118,13 @@
         const soundButtonHit = (event) => {
           const rect = canvas.getBoundingClientRect();
           if (!rect.width || !rect.height) return false;
-          const screenX = (event.clientX - rect.left) * window.innerWidth / rect.width;
-          const screenY = window.innerHeight - (event.clientY - rect.top) * window.innerHeight / rect.height;
-          const scale = Math.min(window.innerWidth / 800, window.innerHeight / 600);
-          const offsetX = (window.innerWidth - 800 * scale) / 2;
-          const offsetY = (window.innerHeight - 600 * scale) / 2;
+          const screenW = canvas.width || rect.width;
+          const screenH = canvas.height || rect.height;
+          const screenX = (event.clientX - rect.left) * screenW / rect.width;
+          const screenY = screenH - (event.clientY - rect.top) * screenH / rect.height;
+          const scale = Math.min(screenW / 800, screenH / 600);
+          const offsetX = (screenW - 800 * scale) / 2;
+          const offsetY = (screenH - 600 * scale) / 2;
           const x = (screenX - offsetX) / scale;
           const y = (screenY - offsetY) / scale;
           return x >= 670 && x <= 782 && y >= 18 && y <= 52;
