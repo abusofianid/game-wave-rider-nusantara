@@ -123,7 +123,20 @@ fn reset(p: &mut Player, bombs: &mut Vec<Thing>, items: &mut Vec<Collectible>, s
     p.reset(); bombs.clear(); items.clear(); *score = 0; *lives = 3; *speed = 1.0;
 }
 
-#[macroquad::main("Wave Rider Nusantara")]
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "Wave Rider Nusantara".to_owned(),
+        window_width: W as i32,
+        window_height: H as i32,
+        // Render at the device pixel ratio on high-density mobile screens.
+        high_dpi: true,
+        // Enable multisample antialiasing for cleaner vector UI edges.
+        sample_count: 4,
+        ..Default::default()
+    }
+}
+
+#[macroquad::main(window_conf)]
 async fn main() {
     let a = assets().await;
     let scale_player = (TARGET_SIZE / a.idle[0].width()).min(TARGET_SIZE / a.idle[0].height());
@@ -161,9 +174,14 @@ async fn main() {
             touch.phase, TouchPhase::Started | TouchPhase::Moved | TouchPhase::Stationary
         ));
         let touch_click = touch_start.is_some();
-        let (mx, my) = touch_position
+        let (mx, raw_my) = touch_position
             .map(|touch| (touch.position.x, touch.position.y))
             .unwrap_or_else(mouse_position);
+        // The canvas is vertically flipped at the presentation layer to correct
+        // the WebGL output orientation. Convert pointer coordinates back into
+        // the game's normal top-left coordinate space so buttons and touch
+        // controls remain aligned with what the player sees.
+        let my = sh - raw_my;
         let mouse = vec2((mx - ox) / scale, (my - oy) / scale);
         let pointer_down = is_mouse_button_down(MouseButton::Left)
             || active_touches.iter().any(|touch| matches!(touch.phase, TouchPhase::Started | TouchPhase::Moved | TouchPhase::Stationary));
