@@ -121,7 +121,6 @@ fn reset(p: &mut Player, bombs: &mut Vec<Thing>, items: &mut Vec<Collectible>, s
 
 #[macroquad::main("Wave Rider Nusantara")]
 async fn main() {
-    console_error_panic_hook::set_once();
     let a = assets().await;
     let scale_player = (TARGET_SIZE / a.idle[0].width()).min(TARGET_SIZE / a.idle[0].height());
     let mut player = Player::new(a.idle[0].width() * scale_player, a.idle[0].height() * scale_player);
