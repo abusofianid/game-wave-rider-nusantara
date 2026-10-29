@@ -170,12 +170,10 @@ async fn main() {
         let click = is_mouse_button_pressed(MouseButton::Left) || touch_click;
 
         clear_background(BLACK);
-        // Macroquad's display-rect camera already maps drawing coordinates to a
-        // top-left origin, matching the React canvas (0,0 at the upper-left).
+        // Keep Macroquad's default display-rect Y orientation: its negative Y
+        // zoom maps the top-left-origin game coordinates to WebGL correctly.
+        // Forcing zoom.y positive flips the entire scene vertically.
         let mut camera = Camera2D::from_display_rect(Rect::new(0.0, 0.0, W, H));
-        // Macroquad's WebGL canvas path applies its own Y inversion. Use a
-        // positive camera Y zoom here so the game remains upright in WASM.
-        camera.zoom.y = camera.zoom.y.abs();
         camera.viewport = Some((ox as i32, oy as i32, vw as i32, vh as i32));
         set_camera(&camera);
 
