@@ -1,0 +1,47 @@
+name: Convert Rust soundtrack to OGG
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/convert-rust-soundtrack.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
+      - name: Convert and validate soundtrack
+        shell: bash
+        run: |
+          set -euo pipefail
+          source="rust/assets/audio/bg-sound.webm"
+          output="rust/assets/audio/bg-sound.ogg"
+
+          test -s "$source"
+          ffmpeg -hide_banner -loglevel error -y -i "$source" -vn -c:a libvorbis -q:a 3 "$output"
+          test -s "$output"
+          ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 "$output" | grep -qx vorbis
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$output" | awk 'NF && $1 > 0 { ok=1 } END { exit !ok }'
+
+      - name: Replace WebM with validated OGG
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm rust/assets/audio/bg-sound.webm
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rust/assets/audio/bg-sound.ogg rust/assets/audio/bg-sound.webm
+          git commit -m "Replace Rust WebM soundtrack with OGG"
+          git push
