@@ -153,21 +153,23 @@ async fn main() {
         let vh = H * scale;
         let ox = (sw - vw) / 2.0;
         let oy = (sh - vh) / 2.0;
-        // Mobile browsers do not consistently synthesize mouse clicks from touch.
-        // Read Macroquad's native touch events as well as mouse input.
-        let touch_start = touches().into_iter().find(|touch| touch.phase == TouchPhase::Started);
+        // Read both new touch presses and held touches. Mobile browsers do not
+        // consistently synthesize mouse events for a canvas.
+        let active_touches = touches();
+        let touch_start = active_touches.iter().find(|touch| touch.phase == TouchPhase::Started);
         let touch_click = touch_start.is_some();
         let (mx, my) = touch_start
-            .as_ref()
             .map(|touch| (touch.position.x, touch.position.y))
             .unwrap_or_else(mouse_position);
         let mouse = vec2((mx - ox) / scale, (my - oy) / scale);
+        let pointer_down = is_mouse_button_down(MouseButton::Left)
+            || active_touches.iter().any(|touch| matches!(touch.phase, TouchPhase::Started | TouchPhase::Moved | TouchPhase::Stationary));
         let click = is_mouse_button_pressed(MouseButton::Left) || touch_click;
 
         clear_background(BLACK);
-        // Macroquad's display-rect camera uses a bottom-left origin. Use a negative
-        // height so our game keeps the web version's top-left, y-down coordinates.
-        let mut camera = Camera2D::from_display_rect(Rect::new(0.0, H, W, -H));
+        // Macroquad's display-rect camera already maps drawing coordinates to a
+        // top-left origin, matching the React canvas (0,0 at the upper-left).
+        let mut camera = Camera2D::from_display_rect(Rect::new(0.0, 0.0, W, H));
         camera.viewport = Some((ox as i32, oy as i32, vw as i32, vh as i32));
         set_camera(&camera);
 
@@ -189,7 +191,7 @@ async fn main() {
             if is_key_down(KeyCode::Right) || is_key_down(KeyCode::D) { dx += PLAYER_SPEED * dt; }
             if is_key_down(KeyCode::Up) || is_key_down(KeyCode::W) { dy -= PLAYER_SPEED * dt; }
             if is_key_down(KeyCode::Down) || is_key_down(KeyCode::S) { dy += PLAYER_SPEED * dt; }
-            if sw < 800.0 && is_mouse_button_down(MouseButton::Left) {
+            if sw < 800.0 && pointer_down {
                 if Rect::new(38.0, 500.0, 58.0, 58.0).contains(mouse) { dx -= PLAYER_SPEED * dt; }
                 if Rect::new(154.0, 500.0, 58.0, 58.0).contains(mouse) { dx += PLAYER_SPEED * dt; }
                 if Rect::new(96.0, 442.0, 58.0, 58.0).contains(mouse) { dy -= PLAYER_SPEED * dt; }
@@ -240,7 +242,7 @@ async fn main() {
         if music_started {
             // Audio is optional and must never prevent the game from remaining playable.
             if let Some(sound) = music.as_ref() {
-                let volume = if muted || state != GameState::Playing { 0.0 } else { 0.05 };
+                let volume = if muted || state != GameState::Playing { 0.0 } else { 0.12 };
                 set_sound_volume(sound, volume);
             }
         }
@@ -269,7 +271,7 @@ async fn main() {
                     if !music_started {
                         // Start the already-loaded sound directly in the user's tap handler.
                         if let Some(sound) = music.as_ref() {
-                            play_sound(sound, PlaySoundParams { looped: true, volume: if muted { 0.0 } else { 0.05 } });
+                            play_sound(sound, PlaySoundParams { looped: true, volume: if muted { 0.0 } else { 0.12 } });
                             music_started = true;
                         }
                     }
