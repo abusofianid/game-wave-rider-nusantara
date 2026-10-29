@@ -61,19 +61,24 @@ async fn texture(path: &str) -> Texture2D {
     t
 }
 async fn assets() -> Assets {
+    // Start all network asset requests together to avoid serial round-trip latency.
+    let (bg, idle1, idle2, hit, collect, bomb, batik1, batik2, batik3, batik4, font) = futures::join!(
+        texture("assets/images/bg.webp"),
+        texture("assets/images/gatot-1.webp"),
+        texture("assets/images/gatot-2.webp"),
+        texture("assets/images/gatot-hit.webp"),
+        texture("assets/images/gatot-collect.webp"),
+        texture("assets/images/bomb.webp"),
+        texture("assets/images/collect-1.webp"),
+        texture("assets/images/collect-2.webp"),
+        texture("assets/images/collect-3.webp"),
+        texture("assets/images/collect-4.webp"),
+        load_ttf_font("assets/fonts/OpenSans-SemiBold.ttf"),
+    );
     Assets {
-        bg: texture("assets/images/bg.webp").await,
-        idle: [texture("assets/images/gatot-1.webp").await, texture("assets/images/gatot-2.webp").await],
-        hit: texture("assets/images/gatot-hit.webp").await,
-        collect: texture("assets/images/gatot-collect.webp").await,
-        bomb: texture("assets/images/bomb.webp").await,
-        batik: [
-            texture("assets/images/collect-1.webp").await,
-            texture("assets/images/collect-2.webp").await,
-            texture("assets/images/collect-3.webp").await,
-            texture("assets/images/collect-4.webp").await,
-        ],
-        font: load_ttf_font("assets/fonts/OpenSans-SemiBold.ttf").await.expect("Could not load OpenSans"),
+        bg, idle: [idle1, idle2], hit, collect, bomb,
+        batik: [batik1, batik2, batik3, batik4],
+        font: font.expect("Could not load OpenSans"),
     }
 }
 fn collision(ax: f32, ay: f32, aw: f32, ah: f32, bx: f32, by: f32, bw: f32, bh: f32) -> bool {
@@ -148,7 +153,6 @@ async fn main() {
     let mut lives = 3_u8;
     let mut speed = 1.0_f32;
     let mut language = 1_usize;
-    let mut muted = false;
 
     loop {
         let dt = get_frame_time().min(0.05);
@@ -184,7 +188,6 @@ async fn main() {
         // The CSS canvas is vertically flipped for WebGL presentation.
         let mouse = camera.screen_to_world(vec2(mx, sh - raw_my));
 
-        if is_key_pressed(KeyCode::M) { muted = !muted; }
         if is_key_pressed(KeyCode::P) {
             state = match state { GameState::Playing => GameState::Paused, GameState::Paused => GameState::Playing, other => other };
         }
@@ -305,10 +308,6 @@ async fn main() {
             }
         }
 
-        let sound_text = if muted { "SOUND OFF" } else { "SOUND ON" };
-        if button(sound_text, Rect::new(670.0, 18.0, 112.0, 34.0), muted, translucent, &a.font, mouse, click) {
-            muted = !muted;
-        }
         set_default_camera();
         next_frame().await;
     }
