@@ -9,30 +9,31 @@ A Rust implementation alongside the existing React and Python versions. Macroqua
 - Menu, pause/resume, game over, and restart.
 - English and Indonesian UI.
 - Keyboard and mouse input, plus on-screen controls on narrow screens.
-- Looping background music with a mute toggle.
+- Looping background music with a mute toggle; music is silenced outside gameplay.
 - Reuses the web version's WebP background, character, bomb, and collectible artwork.
 - Delta-time movement and frame-rate-scaled spawning.
 
 ## Desktop
 
-Install stable Rust and run from this directory:
+Install stable Rust and FFmpeg, then run from this directory:
 
+    ./scripts/prepare-audio.sh
     cargo run --release
 
-## WebAssembly
+The preparation script converts the existing WebM soundtrack to OGG Vorbis at a compact quality setting. If FFmpeg is not installed, it can download the `ffmpeg-static` npm package when Node.js/npm are available.
 
-Install the WebAssembly target and wasm-bindgen CLI:
+## WebAssembly locally
 
-    rustup target add wasm32-unknown-unknown
-    cargo install wasm-bindgen-cli
-    cargo build --release --target wasm32-unknown-unknown
-    wasm-bindgen target/wasm32-unknown-unknown/release/wave_rider_nusantara.wasm --out-dir web --target web --no-typescript
+Install stable Rust, the WebAssembly target, and FFmpeg. Then run:
 
-Serve this directory over HTTP (not as a file URL), for example:
-
+    ./scripts/build-wasm.sh
     python3 -m http.server 8000
 
-Open http://localhost:8000/index.html. The generated JS and WASM files are placed in web/.
+Open http://localhost:8000/web/. Serve over HTTP rather than opening the HTML as a local file. The build script generates `web/index.html`, the wasm-bindgen JavaScript/WASM files, and the assets directory.
+
+## WebAssembly on Vercel
+
+The dedicated Vercel project uses `rust/` as its root directory, runs `bash scripts/build-wasm.sh`, and serves the generated `web/` output. It builds the `rust` branch as a preview so the existing web version and production deployment remain untouched.
 
 ## Controls
 
@@ -43,12 +44,12 @@ Open http://localhost:8000/index.html. The generated JS and WASM files are place
 - R: return to the menu after game over.
 - Mouse/touch: use the on-screen buttons.
 
-## Assets and audio compatibility
+## Assets and audio
 
-Artwork and OpenSans are reused from the existing web version and kept in WebP format where applicable. Macroquad's audio decoding is more compatible with WAV than browser-oriented WebM, so the Rust port uses the repository's existing WAV soundtrack from the Python version. The original React and Python directories are unchanged.
+Images stay in WebP format. The original web soundtrack is WebM (about 2.28 MB) and the original Python soundtrack is WAV (about 3.70 MB). Macroquad does not decode WebM directly, so the build converts WebM to OGG Vorbis, which is supported by the game runtime and generally smaller than uncompressed WAV. The generated OGG is a build artifact and is not committed.
 
-The repository includes MIT and Apache-2.0 license files at its root. Verify any third-party asset attribution requirements before redistributing builds.
+The original React and Python directories are unchanged. The repository includes MIT and Apache-2.0 license files at its root; verify any third-party asset attribution requirements before redistributing builds.
 
 ## Validation
 
-Native and WebAssembly builds should be run with the Rust toolchain installed. This branch does not configure deployment.
+GitHub Actions checks the desktop target, unit tests, and WebAssembly target, then builds a downloadable static WebAssembly artifact. The Vercel preview is built independently from the same branch.

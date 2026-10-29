@@ -1,4 +1,4 @@
-name: Rust checks
+name: Rust checks and WebAssembly build
 
 on:
   push:
@@ -12,15 +12,46 @@ on:
       - ".github/workflows/rust-check.yml"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  compile:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+      - name: Install audio conversion tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Prepare compressed soundtrack
+        run: bash rust/scripts/prepare-audio.sh
       - name: Check desktop target
         run: cargo check --manifest-path rust/Cargo.toml
+      - name: Run unit tests
+        run: cargo test --manifest-path rust/Cargo.toml
       - name: Check WebAssembly target
         run: cargo check --manifest-path rust/Cargo.toml --target wasm32-unknown-unknown
+      - name: Build optimized WebAssembly
+        run: cargo build --manifest-path rust/Cargo.toml --release --target wasm32-unknown-unknown
+      - name: Generate browser bindings and static site
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd rust
+          WB_VERSION="$(cargo tree --target wasm32-unknown-unknown -i wasm-bindgen --depth 0 | sed -n 's/.*wasm-bindgen v\([0-9.]*\).*/\1/p' | head -n 1)"
+          test -n "$WB_VERSION"
+          cargo install wasm-bindgen-cli --version "$WB_VERSION" --locked
+          wasm-bindgen target/wasm32-unknown-unknown/release/wave_rider_nusantara.wasm --out-dir web --target web --no-typescript
+          cp index.html web/index.html
+          mkdir -p web/assets/audio
+          cp -r assets/images assets/fonts web/assets/
+          cp assets/audio/bg-sound.ogg web/assets/audio/
+      - name: Upload WebAssembly site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-rider-nusantara-wasm
+          path: rust/web/
+          if-no-files-found: error
+          retention-days: 14

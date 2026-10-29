@@ -1,5 +1,5 @@
 use macroquad::audio::{
-    load_sound, pause_sound, play_sound, resume_sound, set_sound_volume, PlaySoundParams, Sound,
+    load_sound, play_sound, set_sound_volume, PlaySoundParams, Sound,
 };
 use macroquad::prelude::*;
 use macroquad::rand::gen_range;
@@ -77,7 +77,7 @@ async fn assets() -> Assets {
             texture("assets/images/collect-4.webp").await,
         ],
         font: load_ttf_font("assets/fonts/OpenSans-SemiBold.ttf").await.expect("Could not load OpenSans"),
-        music: load_sound("assets/audio/bg-sound.wav").await.expect("Could not load soundtrack"),
+        music: load_sound("assets/audio/bg-sound.ogg").await.expect("Could not load soundtrack"),
     }
 }
 fn collision(ax: f32, ay: f32, aw: f32, ah: f32, bx: f32, by: f32, bw: f32, bh: f32) -> bool {
@@ -134,7 +134,6 @@ async fn main() {
     let mut language = 1_usize;
     let mut muted = false;
     let mut music_started = false;
-    let mut music_paused = false;
 
     loop {
         let dt = get_frame_time().min(0.05);
@@ -221,9 +220,9 @@ async fn main() {
         }
 
         if music_started {
-            set_sound_volume(&a.music, if muted { 0.0 } else { 0.05 });
-            if state == GameState::Playing && music_paused { resume_sound(&a.music); music_paused = false; }
-            else if state != GameState::Playing && !music_paused { pause_sound(&a.music); music_paused = true; }
+            // Macroquad does not expose pause/resume for Sound; silence while menus are open.
+            let volume = if muted || state != GameState::Playing { 0.0 } else { 0.05 };
+            set_sound_volume(&a.music, volume);
         }
 
         draw_scene(&a, &player, &bombs, &items, state);
@@ -250,7 +249,6 @@ async fn main() {
                     if !music_started {
                         play_sound(&a.music, PlaySoundParams { looped: true, volume: if muted { 0.0 } else { 0.05 } });
                         music_started = true;
-                        music_paused = false;
                     }
                 }
             }
