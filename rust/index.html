@@ -96,13 +96,12 @@
         window.setTimeout(() => {
           if (!failed && status.dataset.phase !== "running" && !status.hidden) {
             const canvas = document.getElementById("glcanvas");
-            const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
             const detail = [
               "The page loaded, but the game did not finish initializing within 12 seconds.",
               "WASM stage: " + wasmStage + ".",
               "WebAssembly API: " + (wasmApi ? "available" : "unavailable") + ".",
               "Canvas: " + canvas.width + "×" + canvas.height + ".",
-              "WebGL context: " + (gl ? "available" : "unavailable") + ".",
+              "Macroquad WebGL request: " + (window.__macroquadWebGLContext || "not observed") + ".",
               wasmError ? "Last WASM error: " + wasmError : "No WebAssembly API error was captured."
             ].join(" ");
             showError("WebAssembly startup timed out — diagnostic details", detail);
@@ -213,13 +212,13 @@
           }
           canvas.getContext = (type, ...args) => {
             const context = originalGetContext(type, ...args);
-            if (context && (type === "webgl" || type === "webgl2")) watchDrawCalls(context);
+            if (type === "webgl" || type === "webgl2") {
+              window.__macroquadWebGLContext = context ? type + " available" : type + " unavailable";
+              if (context) watchDrawCalls(context);
+            }
             return context;
           };
           load("./wave_rider_nusantara.wasm");
-          }
-          load("./wave_rider_nusantara.wasm");
-          window.requestAnimationFrame(detectRenderedFrame);
         } catch (error) {
           showFailure("Could not start WebAssembly", error && error.message ? error.message : String(error));
         }
