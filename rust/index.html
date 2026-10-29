@@ -13,9 +13,6 @@
       #game-controls .control-row { display: flex; justify-content: center; }
       #game-controls button { width: 60px; height: 60px; margin: 2px 5px; border-radius: 15px; background: rgba(0,0,0,0.7); border: 2px solid #fff; color: #fff; font: 700 24px/1 system-ui, sans-serif; display: flex; justify-content: center; align-items: center; touch-action: none; -webkit-tap-highlight-color: transparent; user-select: none; padding: 0; }
       #game-controls button:active { background: rgba(255,255,255,0.25); }
-      #startup-status { position: fixed; z-index: 5; inset: auto 12px 94px; padding: 12px 14px; border: 1px solid #666; border-radius: 8px; background: #171717; color: #fff; font: 14px/1.45 system-ui, sans-serif; overflow-wrap: anywhere; }
-      #startup-status[hidden] { display: none; }
-      #startup-status strong { display: block; margin-bottom: 4px; }
     </style>
   </head>
   <body>
@@ -38,7 +35,7 @@
         // Use the same browser-native WebM soundtrack as the React version. Calling
         // play() synchronously from the trusted pointer/keyboard event avoids WebAudio
         // autoplay restrictions that can swallow a start request from the WASM frame loop.
-        const music = new Audio("./assets/audio/bg-sound.webm");
+        const music = new Audio("./assets/audio/bg-sound.ogg");
         music.loop = true;
         music.preload = "auto";
         music.volume = 0.05;
@@ -130,224 +127,63 @@
         event.preventDefault();
       }, { passive: false });
     </script>
-    <div id="startup-status" role="status" aria-live="polite">
-      <strong>Wave Rider Nusantara — startup diagnostic build</strong>
-      Diagnostic build 82b98c0 is loaded. Waiting for the Rust WebAssembly game to initialize…
-    </div>
+    <script src="./mq_js_bundle.js"></script>
     <script>
+      // Start the OGG soundtrack directly inside the user's trusted gesture so
+      // mobile browsers do not reject playback from an asynchronous WASM callback.
       (() => {
-        const status = document.getElementById("startup-status");
-        let failed = false;
-        function showError(title, detail) {
-          failed = true;
-          status.dataset.phase = "failed";
-          status.dataset.failed = "true";
-          status.hidden = false;
-          status.innerHTML = "";
-          const heading = document.createElement("strong");
-          heading.textContent = title;
-          const message = document.createElement("div");
-          message.textContent = detail || "No additional error details were provided.";
-          status.append(heading, message);
-        }
-        const originalConsoleError = console.error.bind(console);
-        console.error = (...args) => {
-          originalConsoleError(...args);
-          const detail = args.map((value) => {
-            try { return typeof value === "string" ? value : JSON.stringify(value); }
-            catch { return String(value); }
-          }).join(" ");
-          if (/panicked at|panicked:|panicked with/i.test(detail)) showError("Rust panic details", detail);
+        const canvas = document.getElementById("glcanvas");
+        const music = new Audio("./assets/audio/bg-sound.ogg");
+        music.loop = true;
+        music.preload = "auto";
+        music.volume = 0.05;
+        let started = false;
+        let paused = false;
+        let muted = false;
+        const play = () => {
+          if (muted) return;
+          const promise = music.play();
+          if (promise && promise.catch) promise.catch(() => {});
         };
-        window.addEventListener("error", (event) => {
-          const heading = status.querySelector("strong");
-          if (heading && heading.textContent === "Rust panic details") return;
-          showError("Game startup error", event.message || "A script or WebAssembly resource failed to load.");
-        });
-        window.addEventListener("unhandledrejection", (event) => {
-          const reason = event.reason;
-          showError("Game startup error", reason && reason.message ? reason.message : String(reason || "Unhandled promise rejection"));
-        });
-        const testCanvas = document.createElement("canvas");
-        const gl = testCanvas.getContext("webgl2") || testCanvas.getContext("webgl");
-        if (!gl) {
-          showError("WebGL is unavailable", "Firefox could not create a WebGL context. Check Firefox settings, device graphics support, and hardware acceleration.");
-        }
-        // Start the watchdog immediately. Waiting for the window "load" event can
-        // leave the original message stuck if the loader stalls before that event.
-        let wasmStage = "loader not started";
-        let wasmError = "";
-        const wasmApi = window.WebAssembly;
-        if (wasmApi) {
-          for (const method of ["instantiate", "instantiateStreaming", "compile", "compileStreaming"]) {
-            if (typeof wasmApi[method] !== "function") continue;
-            const original = wasmApi[method].bind(wasmApi);
-            wasmApi[method] = (...args) => {
-              wasmStage = method + " called";
-              let result;
-              try {
-                result = original(...args);
-              } catch (error) {
-                wasmError = method + ": " + (error && error.message ? error.message : String(error));
-                wasmStage = method + " threw";
-                throw error;
-              }
-              if (result && typeof result.then === "function") {
-                return result.then(
-                  value => { wasmStage = method + " succeeded"; return value; },
-                  error => {
-                    wasmError = method + ": " + (error && error.message ? error.message : String(error));
-                    wasmStage = method + " rejected";
-                    throw error;
-                  }
-                );
-              }
-              wasmStage = method + " succeeded";
-              return result;
-            };
-          }
-        }
-        window.setTimeout(() => {
-          if (failed || status.hidden) return;
-          const canvas = document.getElementById("glcanvas");
-          const hasMacroquadContext = Boolean(window.__macroquadWebGLContext && window.__macroquadWebGLContext.endsWith(" available"));
-          const canvasResized = canvas.width > 300 || canvas.height > 150;
-          // Some WebGL implementations bypass the prototype draw-call observer.
-          // A live Macroquad context and resized drawing buffer should not be
-          // reported as a fatal startup timeout (the menu may already be visible).
-          if (hasMacroquadContext && canvasResized) {
-            status.dataset.phase = "running";
-            status.hidden = true;
-            return;
-          }
-          if (status.dataset.phase !== "running") {
-            const detail = [
-              "The page loaded, but the game did not finish initializing within 12 seconds.",
-              "WASM stage: " + wasmStage + ".",
-              "WebAssembly API: " + (wasmApi ? "available" : "unavailable") + ".",
-              "Canvas: " + canvas.width + "×" + canvas.height + ".",
-              "Macroquad WebGL request: " + (window.__macroquadWebGLContext || "not observed") + ".",
-              wasmError ? "Last WASM error: " + wasmError : "No WebAssembly API error was captured."
-            ].join(" ");
-            showError("WebAssembly startup timed out — diagnostic details", detail);
-          }
-        }, 12000);
-      })();
-    </script>
-    <script src="./mq_js_bundle.js" onerror="document.getElementById('startup-status').hidden=false;document.getElementById('startup-status').textContent='Could not load the Macroquad JavaScript loader (mq_js_bundle.js).';"></script>
-    <script>
-      (async () => {
-        const status = document.getElementById("startup-status");
-        const showFailure = (title, detail) => {
-          status.dataset.phase = "failed";
-          status.dataset.failed = "true";
-          status.dataset.phase = "failed";
-          status.hidden = false;
-          status.replaceChildren();
-          const heading = document.createElement("strong");
-          heading.textContent = title;
-          const message = document.createElement("div");
-          message.textContent = detail;
-          status.append(heading, message);
+        const stop = () => music.pause();
+        const pointFromEvent = (event) => {
+          const rect = canvas.getBoundingClientRect();
+          const scale = Math.min(rect.width / 800, rect.height / 600);
+          if (!scale) return null;
+          const ox = (rect.width - 800 * scale) / 2;
+          const oy = (rect.height - 600 * scale) / 2;
+          return { x: (event.clientX - rect.left - ox) / scale, y: 600 - (event.clientY - rect.top - oy) / scale };
         };
-        const requiredFiles = [
-          "./wave_rider_nusantara.wasm",
-          "./assets/images/bg.webp",
-          "./assets/images/gatot-1.webp",
-          "./assets/images/gatot-2.webp",
-          "./assets/images/gatot-hit.webp",
-          "./assets/images/gatot-collect.webp",
-          "./assets/images/bomb.webp",
-          "./assets/images/collect-1.webp",
-          "./assets/images/collect-2.webp",
-          "./assets/images/collect-3.webp",
-          "./assets/images/collect-4.webp",
-          "./assets/fonts/OpenSans-SemiBold.ttf",
-          "./assets/audio/bg-sound.webm"
-        ];
-        try {
-          status.hidden = false;
-          status.dataset.phase = "checking";
-          status.replaceChildren();
-          const heading = document.createElement("strong");
-          heading.textContent = "Wave Rider Nusantara — startup diagnostic build";
-          const message = document.createElement("div");
-          message.textContent = "Checking WebAssembly and game assets…";
-          status.append(heading, message);
-
-          const checks = await Promise.all(requiredFiles.map(async (path) => {
-            try {
-              const isWasm = path.endsWith(".wasm");
-              const response = await fetch(path, { method: isWasm ? "GET" : "HEAD", cache: "no-store" });
-              if (!response.ok) return path + " returned HTTP " + response.status;
-              if (isWasm) {
-                const bytes = await response.arrayBuffer();
-                if (bytes.byteLength < 8) return path + " is empty or too small (" + bytes.byteLength + " bytes)";
-                const magic = new Uint8Array(bytes.slice(0, 4));
-                if (magic[0] !== 0 || magic[1] !== 97 || magic[2] !== 115 || magic[3] !== 109) {
-                  return path + " did not return a valid WebAssembly file";
-                }
-              }
-              return null;
-            } catch (error) {
-              return path + " failed: " + (error && error.message ? error.message : String(error));
-            }
-          }));
-          const failures = checks.filter(Boolean);
-          if (failures.length) {
-            showFailure("Required game files failed to load", failures.join(" | "));
-            return;
+        canvas.addEventListener("pointerdown", (event) => {
+          const p = pointFromEvent(event);
+          if (!p) return;
+          if (!started && p.x >= 280 && p.x <= 520 && p.y >= 360 && p.y <= 440) {
+            started = true;
+            paused = false;
+            play();
+          } else if (p.x >= 660 && p.x <= 790 && p.y >= 12 && p.y <= 58) {
+            muted = !muted;
+            music.muted = muted;
+            if (!muted && started && !paused) play();
+          } else if (started && p.x >= 560 && p.x <= 665 && p.y >= 12 && p.y <= 58) {
+            paused = !paused;
+            if (paused) stop(); else play();
+          } else if (paused && p.y >= 300 && p.y <= 390) {
+            paused = false;
+            play();
           }
-          if (typeof load !== "function") {
-            showFailure("Macroquad loader unavailable", "mq_js_bundle.js loaded without defining load(). Check the loader file and its response.");
-            return;
-          }
-          message.textContent = "All required files responded successfully. Starting the Rust WebAssembly game…";
-          status.dataset.phase = "starting";
-          // Capture the context Macroquad itself requests. Never create a context
-          // here: getContext() fixes the canvas to that type, so asking for WebGL2
-          // first can make Macroquad's WebGL1 initialization fail.
-          const canvas = document.getElementById("glcanvas");
-          let renderDetected = false;
-          const watchedPrototypes = new WeakSet();
-          const originalGetContext = canvas.getContext.bind(canvas);
-          function watchDrawCalls(context) {
-            const prototype = Object.getPrototypeOf(context);
-            if (watchedPrototypes.has(prototype)) return;
-            watchedPrototypes.add(prototype);
-            for (const method of ["drawArrays", "drawElements"]) {
-              const originalDraw = prototype[method];
-              if (typeof originalDraw !== "function") continue;
-              try {
-                Object.defineProperty(prototype, method, {
-                  configurable: true,
-                  writable: true,
-                  value: function (...drawArgs) {
-                    if (this.canvas === canvas && !renderDetected && status.dataset.phase !== "failed") {
-                      renderDetected = true;
-                      status.dataset.phase = "running";
-                      status.hidden = true;
-                    }
-                    return originalDraw.apply(this, drawArgs);
-                  }
-                });
-              } catch (error) {
-                // Keep the watchdog active if the browser protects native methods.
-              }
-            }
-          }
-          canvas.getContext = (type, ...args) => {
-            const context = originalGetContext(type, ...args);
-            if (type === "webgl" || type === "webgl2") {
-              window.__macroquadWebGLContext = context ? type + " available" : type + " unavailable";
-              if (context) watchDrawCalls(context);
-            }
-            return context;
-          };
-          load("./wave_rider_nusantara.wasm");
-        } catch (error) {
-          showFailure("Could not start WebAssembly", error && error.message ? error.message : String(error));
-        }
+        });
+        window.addEventListener("keydown", (event) => {
+          if (event.code === "Space" && !started) { started = true; paused = false; play(); }
+          if (event.code === "KeyP" && started) { paused = !paused; if (paused) stop(); else play(); }
+          if (event.code === "KeyM") { muted = !muted; music.muted = muted; if (!muted && started && !paused) play(); }
+          if (event.code === "KeyR" && started) { started = false; paused = false; stop(); }
+        });
+        const status = document.createElement("div");
+        status.hidden = true;
+        status.setAttribute("aria-live", "off");
+        document.body.append(status);
+        if (typeof load === "function") load("./wave_rider_nusantara.wasm");
       })();
     </script>
   </body>
