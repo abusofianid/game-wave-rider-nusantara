@@ -61,12 +61,51 @@
         }
         // Start the watchdog immediately. Waiting for the window "load" event can
         // leave the original message stuck if the loader stalls before that event.
+        let wasmStage = "loader not started";
+        let wasmError = "";
+        const wasmApi = window.WebAssembly;
+        if (wasmApi) {
+          for (const method of ["instantiate", "instantiateStreaming", "compile", "compileStreaming"]) {
+            if (typeof wasmApi[method] !== "function") continue;
+            const original = wasmApi[method].bind(wasmApi);
+            wasmApi[method] = (...args) => {
+              wasmStage = method + " called";
+              let result;
+              try {
+                result = original(...args);
+              } catch (error) {
+                wasmError = method + ": " + (error && error.message ? error.message : String(error));
+                wasmStage = method + " threw";
+                throw error;
+              }
+              if (result && typeof result.then === "function") {
+                return result.then(
+                  value => { wasmStage = method + " succeeded"; return value; },
+                  error => {
+                    wasmError = method + ": " + (error && error.message ? error.message : String(error));
+                    wasmStage = method + " rejected";
+                    throw error;
+                  }
+                );
+              }
+              wasmStage = method + " succeeded";
+              return result;
+            };
+          }
+        }
         window.setTimeout(() => {
           if (!failed && status.dataset.phase !== "running" && !status.hidden) {
-            showError(
-              "WebAssembly startup timed out",
-              "The page loaded, but the game did not finish initializing within 12 seconds. Check whether wave_rider_nusantara.wasm and the assets under assets/ load successfully, and whether the browser supports WebGL."
-            );
+            const canvas = document.getElementById("glcanvas");
+            const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+            const detail = [
+              "The page loaded, but the game did not finish initializing within 12 seconds.",
+              "WASM stage: " + wasmStage + ".",
+              "WebAssembly API: " + (wasmApi ? "available" : "unavailable") + ".",
+              "Canvas: " + canvas.width + "×" + canvas.height + ".",
+              "WebGL context: " + (gl ? "available" : "unavailable") + ".",
+              wasmError ? "Last WASM error: " + wasmError : "No WebAssembly API error was captured."
+            ].join(" ");
+            showError("WebAssembly startup timed out — diagnostic details", detail);
           }
         }, 12000);
       })();
