@@ -1,55 +1,72 @@
 # Wave Rider Nusantara — Rust
 
-A Rust implementation alongside the existing React and Python versions. Macroquad provides one gameplay codebase for desktop and WebAssembly.
+The Rust implementation complements the React web game and Python version. It uses [Macroquad](https://macroquad.rs/) for gameplay and can run as a desktop application or compile to WebAssembly for browsers.
 
-## Included features
+## Features
 
 - Gatotkaca idle, hit, and collect animations.
-- Four batik collectibles, bombs, collisions, score, and three lives.
-- Menu, pause/resume, game over, and restart.
-- English and Indonesian UI.
-- Keyboard and mouse input, plus on-screen controls on narrow screens.
-- Looping background music with a mute toggle; music is silenced outside gameplay.
-- Reuses the web version's WebP background, character, bomb, and collectible artwork.
+- Four batik collectibles, bombs, collision detection, scoring, and three lives.
+- Main menu, pause/resume, game-over, and restart flows.
+- English and Indonesian in-game UI.
+- Keyboard and mouse input, with on-screen movement controls on narrow screens.
+- Looping background music with a mute toggle; music is paused when gameplay is paused or reset.
+- Reuses optimized WebP backgrounds, character sprites, bombs, and collectible artwork.
 - Delta-time movement and frame-rate-scaled spawning.
 
-## Desktop
+## Requirements
 
-Install stable Rust and FFmpeg, then run from this directory:
+- Stable Rust toolchain and Cargo.
+- For WebAssembly builds: the `wasm32-unknown-unknown` target (the build script installs it).
+- Python 3, only if you want to serve the generated WebAssembly build locally.
+- FFmpeg is only needed to regenerate the soundtrack from a WebM source; the committed OGG file is used by default.
 
-    ./scripts/prepare-audio.sh
-    cargo run --release
+## Run as a desktop application
 
-The preparation script converts the existing WebM soundtrack to OGG Vorbis at a compact quality setting. If FFmpeg is not installed, it can download the `ffmpeg-static` npm package when Node.js/npm are available.
+From this directory:
 
-## WebAssembly locally
+```bash
+cargo run --release
+```
 
-Install stable Rust, the WebAssembly target, and FFmpeg. Then run:
+The game loads its assets from the `assets/` directory. The background soundtrack is `assets/audio/bg-sound.ogg`.
 
-    ./scripts/build-wasm.sh
-    python3 -m http.server 8000
+## Build and run WebAssembly locally
 
-Open http://localhost:8000/web/. Serve over HTTP rather than opening the HTML as a local file. The build script generates `web/index.html`, the wasm-bindgen JavaScript/WASM files, and the assets directory.
+From this directory:
+
+```bash
+./scripts/build-wasm.sh
+python3 -m http.server 8000
+```
+
+Open [http://localhost:8000/web/](http://localhost:8000/web/). Serve the files over HTTP rather than opening the HTML file directly. The build script generates `web/index.html`, the WebAssembly binary, the Macroquad JavaScript bundle, and the required assets.
+
+The script copies the committed `assets/audio/bg-sound.ogg` into `web/assets/audio/`. It does not need a WebM source file when the OGG asset is already present.
 
 ## WebAssembly on Vercel
 
-The dedicated Vercel project uses `rust/` as its root directory, runs `bash scripts/build-wasm.sh`, and serves the generated `web/` output. It builds the `rust` branch as a preview so the existing web version and production deployment remain untouched.
+The intended Vercel build configuration for this Rust project uses `rust/` as the project root, runs `bash scripts/build-wasm.sh`, and publishes the generated `web/` directory. Confirm the Vercel project settings and latest deployment status before relying on a hosted build; a successful local build does not by itself confirm a successful deployment.
 
 ## Controls
 
-- Arrow keys or WASD: move.
-- Space: start.
-- P: pause or resume.
-- M: mute or unmute.
-- R: return to the menu after game over.
-- Mouse/touch: use the on-screen buttons.
+- **Arrow keys or WASD:** move.
+- **Space:** start.
+- **P:** pause or resume.
+- **M:** mute or unmute.
+- **R:** return to the menu after game over.
+- **Mouse or touch:** use the on-screen controls where available.
 
 ## Assets and audio
 
-Images stay in WebP format. The original web soundtrack is WebM (about 2.28 MB) and the original Python soundtrack is WAV (about 3.70 MB). Macroquad does not decode WebM directly, so the build converts WebM to OGG Vorbis, which is supported by the game runtime and generally smaller than uncompressed WAV. The generated OGG is a build artifact and is not committed.
-
-The original React and Python directories are unchanged. The repository includes MIT and Apache-2.0 license files at its root; verify any third-party asset attribution requirements before redistributing builds.
+- Game artwork is stored as WebP in `assets/images/`.
+- The committed background soundtrack is `assets/audio/bg-sound.ogg`, encoded with OGG Vorbis.
+- The former `bg-sound.webm` source file has been removed from the repository. The WebAssembly build uses the committed OGG file directly.
+- `scripts/prepare-audio.sh` keeps an existing OGG file and only attempts conversion when the OGG is missing and a WebM source is available. Regenerating the OGG requires FFmpeg or Node.js/npm to obtain `ffmpeg-static`.
 
 ## Validation
 
-GitHub Actions checks the desktop target, unit tests, and WebAssembly target, then builds a downloadable static WebAssembly artifact. The Vercel preview is built independently from the same branch.
+The repository's GitHub Actions workflows can validate Rust targets and tests and build a static WebAssembly artifact. Check the [Actions page](https://github.com/abusofianid/game-wave-rider-nusantara/actions) for the latest run results. Deployment status is separate from CI results.
+
+## License and attribution
+
+The repository contains MIT and Apache-2.0 license files at its root. Review those files and any third-party asset attribution requirements before redistributing source code or builds.
