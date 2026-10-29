@@ -6,6 +6,7 @@ description = "A Rust port of Wave Rider Nusantara using Macroquad"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
+futures = "0.3"
 macroquad = "0.4.14"
 image = { version = "0.24.9", default-features = false, features = ["png", "tga", "webp"] }
 
