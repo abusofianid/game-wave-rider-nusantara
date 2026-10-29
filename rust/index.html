@@ -183,37 +183,40 @@
           // here: getContext() fixes the canvas to that type, so asking for WebGL2
           // first can make Macroquad's WebGL1 initialization fail.
           const canvas = document.getElementById("glcanvas");
-          let renderContext = null;
           let renderDetected = false;
+          const watchedPrototypes = new WeakSet();
           const originalGetContext = canvas.getContext.bind(canvas);
-          canvas.getContext = (type, ...args) => {
-            const context = originalGetContext(type, ...args);
-            if (context && (type === "webgl" || type === "webgl2")) {
-              renderContext = context;
-            }
-            return context;
-          };
-          function detectRenderedFrame() {
-            if (renderDetected || status.dataset.phase === "failed") return;
-            if (renderContext) {
+          function watchDrawCalls(context) {
+            const prototype = Object.getPrototypeOf(context);
+            if (watchedPrototypes.has(prototype)) return;
+            watchedPrototypes.add(prototype);
+            for (const method of ["drawArrays", "drawElements"]) {
+              const originalDraw = prototype[method];
+              if (typeof originalDraw !== "function") continue;
               try {
-                const pixel = new Uint8Array(4);
-                for (let y = 20; y < canvas.height; y += Math.max(1, Math.floor(canvas.height / 8))) {
-                  for (let x = 20; x < canvas.width; x += Math.max(1, Math.floor(canvas.width / 8))) {
-                    renderContext.readPixels(x, y, 1, 1, renderContext.RGBA, renderContext.UNSIGNED_BYTE, pixel);
-                    if (pixel[0] > 24 || pixel[1] > 24 || pixel[2] > 24) {
+                Object.defineProperty(prototype, method, {
+                  configurable: true,
+                  writable: true,
+                  value: function (...drawArgs) {
+                    if (this.canvas === canvas && !renderDetected && status.dataset.phase !== "failed") {
                       renderDetected = true;
                       status.dataset.phase = "running";
                       status.hidden = true;
-                      return;
                     }
+                    return originalDraw.apply(this, drawArgs);
                   }
-                }
+                });
               } catch (error) {
-                // Keep diagnostics visible if pixel readback is unavailable.
+                // Keep the watchdog active if the browser protects native methods.
               }
             }
-            window.requestAnimationFrame(detectRenderedFrame);
+          }
+          canvas.getContext = (type, ...args) => {
+            const context = originalGetContext(type, ...args);
+            if (context && (type === "webgl" || type === "webgl2")) watchDrawCalls(context);
+            return context;
+          };
+          load("./wave_rider_nusantara.wasm");
           }
           load("./wave_rider_nusantara.wasm");
           window.requestAnimationFrame(detectRenderedFrame);
