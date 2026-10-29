@@ -26,6 +26,7 @@
         let failed = false;
         function showError(title, detail) {
           failed = true;
+          status.dataset.failed = "true";
           status.hidden = false;
           status.innerHTML = "";
           const heading = document.createElement("strong");
@@ -60,7 +61,7 @@
         // Start the watchdog immediately. Waiting for the window "load" event can
         // leave the original message stuck if the loader stalls before that event.
         window.setTimeout(() => {
-          if (!failed && !status.hidden) {
+          if (!failed && status.dataset.failed !== "true" && status.dataset.phase !== "starting" && !status.hidden) {
             showError(
               "WebAssembly startup timed out",
               "The page loaded, but the game did not finish initializing within 12 seconds. Check whether wave_rider_nusantara.wasm and the assets under assets/ load successfully, and whether the browser supports WebGL."
@@ -74,6 +75,8 @@
       (async () => {
         const status = document.getElementById("startup-status");
         const showFailure = (title, detail) => {
+          status.dataset.failed = "true";
+          status.dataset.phase = "failed";
           status.hidden = false;
           status.replaceChildren();
           const heading = document.createElement("strong");
@@ -98,6 +101,7 @@
         ];
         try {
           status.hidden = false;
+          status.dataset.phase = "checking";
           status.replaceChildren();
           const heading = document.createElement("strong");
           heading.textContent = "Wave Rider Nusantara — startup diagnostic build";
@@ -134,6 +138,7 @@
             return;
           }
           message.textContent = "All required files responded successfully. Starting the Rust WebAssembly game…";
+          status.dataset.phase = "starting";
           load("./wave_rider_nusantara.wasm");
         } catch (error) {
           showFailure("Could not start WebAssembly", error && error.message ? error.message : String(error));
