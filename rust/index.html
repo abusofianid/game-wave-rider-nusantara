@@ -133,7 +133,20 @@
         const toggleMute = () => {
           muted = !muted;
           updateSoundButton();
-          if (!muted) startAudio();
+
+          if (muted) {
+            // Pause immediately as well as setting muted. This avoids audio
+            // continuing on browsers with delayed mute-state propagation.
+            pause();
+            return;
+          }
+
+          // Unmuting is itself a user gesture, so use it to resume playback.
+          if (!started) {
+            started = true;
+            paused = false;
+          }
+          if (!paused) play();
         };
         soundButton.addEventListener("click", (event) => {
           event.preventDefault();
