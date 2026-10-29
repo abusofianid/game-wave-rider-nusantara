@@ -157,8 +157,11 @@ async fn main() {
         // consistently synthesize mouse events for a canvas.
         let active_touches = touches();
         let touch_start = active_touches.iter().find(|touch| touch.phase == TouchPhase::Started);
+        let touch_position = active_touches.iter().find(|touch| matches!(
+            touch.phase, TouchPhase::Started | TouchPhase::Moved | TouchPhase::Stationary
+        ));
         let touch_click = touch_start.is_some();
-        let (mx, my) = touch_start
+        let (mx, my) = touch_position
             .map(|touch| (touch.position.x, touch.position.y))
             .unwrap_or_else(mouse_position);
         let mouse = vec2((mx - ox) / scale, (my - oy) / scale);
