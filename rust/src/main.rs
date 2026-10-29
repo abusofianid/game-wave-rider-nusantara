@@ -128,8 +128,10 @@ fn window_conf() -> Conf {
         window_title: "Wave Rider Nusantara".to_owned(),
         window_width: W as i32,
         window_height: H as i32,
-        // Render at the device pixel ratio on high-density mobile screens.
-        high_dpi: true,
+        // Keep Macroquad's logical screen dimensions aligned with CSS pixels.
+        // High-DPI is intentionally disabled until viewport and pointer scaling
+        // are handled in physical-pixel coordinates; otherwise the game shrinks.
+        high_dpi: false,
         // Enable multisample antialiasing for cleaner vector UI edges.
         sample_count: 4,
         ..Default::default()
