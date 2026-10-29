@@ -41,18 +41,15 @@
           const reason = event.reason;
           showError("Game startup error", reason && reason.message ? reason.message : String(reason || "Unhandled promise rejection"));
         });
-        window.addEventListener("webglcontextcreationerror", (event) => {
-          showError("WebGL is unavailable", event.statusMessage || "This browser or device could not create a WebGL context.");
-        });
-        const canvas = document.getElementById("glcanvas");
-        const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+        const testCanvas = document.createElement("canvas");
+        const gl = testCanvas.getContext("webgl2") || testCanvas.getContext("webgl");
         if (!gl) {
           showError("WebGL is unavailable", "Firefox could not create a WebGL context. Check Firefox settings, device graphics support, and hardware acceleration.");
         }
         window.addEventListener("load", () => {
           window.setTimeout(() => {
-            if (!failed && !status.hidden) {
-              showError("The game has not finished starting", "The page loaded, but the game did not report a startup error. This can indicate a WebAssembly, graphics-driver, or asset-loading problem.");
+            if (!failed) {
+              status.hidden = true;
             }
           }, 12000);
         });
