@@ -1,3 +1,4 @@
 /target/
 /web/*.wasm
 /web/*.js
+/assets/audio/bg-sound.ogg

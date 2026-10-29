@@ -35,7 +35,7 @@ jobs:
         run: cargo check --manifest-path rust/Cargo.toml --target wasm32-unknown-unknown
       - name: Build optimized WebAssembly
         run: cargo build --manifest-path rust/Cargo.toml --release --target wasm32-unknown-unknown
-      - name: Generate browser bindings and static site
+      - name: Assemble static WebAssembly site
         shell: bash
         run: |
           set -euo pipefail
