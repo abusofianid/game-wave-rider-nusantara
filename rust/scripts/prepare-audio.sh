@@ -5,8 +5,14 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SOURCE="$ROOT/assets/audio/bg-sound.webm"
 OUTPUT="$ROOT/assets/audio/bg-sound.ogg"
 
+# Prefer the committed OGG asset. The WebM source is optional after conversion.
+if [[ -f "$OUTPUT" ]]; then
+  printf 'Using soundtrack: %s (%s bytes)\n' "$OUTPUT" "$(wc -c < "$OUTPUT" | tr -d ' ')"
+  exit 0
+fi
+
 if [[ ! -f "$SOURCE" ]]; then
-  echo "Missing soundtrack source: $SOURCE" >&2
+  echo "Missing soundtrack: expected $OUTPUT or source $SOURCE" >&2
   exit 1
 fi
 
