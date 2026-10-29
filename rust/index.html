@@ -8,7 +8,7 @@
     <style>
       html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
       body { display: grid; grid-template-rows: minmax(0, 1fr) 150px; }
-      canvas { width: 100%; height: 100%; min-height: 0; display: block; outline: none; touch-action: none; -webkit-tap-highlight-color: transparent; transform: scaleY(-1); transform-origin: center; image-rendering: auto; }
+      canvas { width: 100%; height: 100%; min-height: 0; display: block; outline: none; touch-action: none; -webkit-tap-highlight-color: transparent; transform: scaleY(-1); transform-origin: center; image-rendering: auto; backface-visibility: hidden; }
       #game-controls { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px 12px calc(4px + env(safe-area-inset-bottom)); background: #000; border-top: 1px solid #383838; touch-action: none; }
       #game-controls .control-row { display: flex; justify-content: center; }
       #game-controls button { width: 60px; height: 60px; margin: 2px 5px; border-radius: 15px; background: rgba(0,0,0,0.7); border: 2px solid #fff; color: #fff; font: 700 24px/1 system-ui, sans-serif; display: flex; justify-content: center; align-items: center; touch-action: none; -webkit-tap-highlight-color: transparent; user-select: none; padding: 0; }
@@ -35,6 +35,61 @@
         const controls = document.getElementById("game-controls");
         const canvas = document.getElementById("glcanvas");
         const activeKeys = new Set();
+        // Use the same browser-native WebM soundtrack as the React version. Calling
+        // play() synchronously from the trusted pointer/keyboard event avoids WebAudio
+        // autoplay restrictions that can swallow a start request from the WASM frame loop.
+        const music = new Audio("./assets/audio/bg-sound.webm");
+        music.loop = true;
+        music.preload = "auto";
+        music.volume = 0.05;
+        let gameStarted = false;
+        let paused = false;
+        let muted = false;
+        const startMusic = () => {
+          if (muted) return;
+          const result = music.play();
+          if (result && typeof result.catch === "function") result.catch(() => {});
+        };
+        const pauseMusic = () => music.pause();
+        const canvasGamePoint = (event) => {
+          const rect = canvas.getBoundingClientRect();
+          const scale = Math.min(rect.width / 800, rect.height / 600);
+          if (!scale) return null;
+          const ox = (rect.width - 800 * scale) / 2;
+          const oy = (rect.height - 600 * scale) / 2;
+          return { x: (event.clientX - rect.left - ox) / scale, y: 600 - (event.clientY - rect.top - oy) / scale };
+        };
+        canvas.addEventListener("pointerdown", (event) => {
+          const point = canvasGamePoint(event);
+          if (!point) return;
+          if (!gameStarted && point.x >= 300 && point.x <= 500 && point.y >= 372 && point.y <= 426) {
+            gameStarted = true;
+            paused = false;
+            startMusic();
+          } else if (point.x >= 670 && point.x <= 782 && point.y >= 18 && point.y <= 52) {
+            muted = !muted;
+            if (muted) pauseMusic(); else if (gameStarted && !paused) startMusic();
+          } else if (gameStarted && point.x >= 570 && point.x <= 658 && point.y >= 18 && point.y <= 52) {
+            paused = !paused;
+            if (paused) pauseMusic(); else startMusic();
+          } else if (paused && point.x >= 250 && point.x <= 390 && point.y >= 320 && point.y <= 364) {
+            paused = false;
+            startMusic();
+          } else if (paused && point.x >= 410 && point.x <= 550 && point.y >= 320 && point.y <= 364) {
+            paused = false;
+            gameStarted = false;
+            pauseMusic();
+          } else if (gameStarted && point.y >= 320 && point.y <= 364 && point.x >= 250 && point.x <= 390) {
+            paused = false;
+            startMusic();
+          }
+        });
+        window.addEventListener("keydown", (event) => {
+          if (event.code === "Space" && !gameStarted) { gameStarted = true; paused = false; startMusic(); }
+          if (event.code === "KeyP" && gameStarted) { paused = !paused; if (paused) pauseMusic(); else startMusic(); }
+          if (event.code === "KeyM") { muted = !muted; if (muted) pauseMusic(); else if (gameStarted && !paused) startMusic(); }
+          if (event.code === "KeyR" && gameStarted) { gameStarted = false; paused = false; pauseMusic(); }
+        });
         const emit = (button, type) => {
           const key = button.dataset.key;
           const keyCode = Number(button.dataset.keyCode);
@@ -207,7 +262,8 @@
           "./assets/images/collect-2.webp",
           "./assets/images/collect-3.webp",
           "./assets/images/collect-4.webp",
-          "./assets/fonts/OpenSans-SemiBold.ttf"
+          "./assets/fonts/OpenSans-SemiBold.ttf",
+          "./assets/audio/bg-sound.webm"
         ];
         try {
           status.hidden = false;
