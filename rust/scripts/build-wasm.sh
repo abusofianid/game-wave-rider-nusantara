@@ -20,4 +20,4 @@ curl --proto '=https' --tlsv1.2 -fsSL https://not-fl3.github.io/miniquad-samples
 sed 's#./web/#./#g' index.html > web/index.html
 mkdir -p web/assets/audio
 cp -r assets/images assets/fonts web/assets/
-cp assets/audio/bg-sound.ogg web/assets/audio/
+cp assets/audio/bg-sound.ogg assets/audio/bg-sound.webm web/assets/audio/
