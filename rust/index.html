@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
+    <link rel="preload" href="./wave_rider_nusantara.wasm" as="fetch" type="application/wasm" crossorigin>
     <link rel="preload" href="./assets/images/bg.webp" as="image" type="image/webp">
     <link rel="preload" href="./assets/fonts/OpenSans-SemiBold.ttf" as="font" type="font/ttf" crossorigin>
     <title>Wave Rider Nusantara — Rust</title>
@@ -13,7 +14,7 @@
       html, body { margin: 0; width: 100%; height: 100%; height: 100dvh; overflow: hidden; background: #000; overscroll-behavior: none; }
       body { display: grid; grid-template-rows: minmax(0, 1fr) clamp(96px, 22dvh, 150px); }
       canvas { width: 100%; height: 100%; min-width: 0; min-height: 0; display: block; outline: none; touch-action: none; -webkit-tap-highlight-color: transparent; transform: scaleY(-1); transform-origin: center; image-rendering: auto; }
-      #sound-toggle { position: fixed; z-index: 5; display: none; align-items: center; justify-content: center; min-width: 74px; min-height: 30px; padding: 5px 7px; border: 1px solid rgba(255,255,255,.9); border-radius: 6px; background: rgba(18,18,18,.92); color: #fff; font: 700 11px/1 system-ui, sans-serif; white-space: nowrap; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+      #sound-toggle { position: fixed; z-index: 10; top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); display: flex; align-items: center; justify-content: center; min-width: 82px; min-height: 34px; padding: 7px 9px; border: 1px solid rgba(255,255,255,.9); border-radius: 7px; background: rgba(18,18,18,.96); color: #fff; font: 700 11px/1 system-ui, sans-serif; white-space: nowrap; touch-action: manipulation; -webkit-tap-highlight-color: transparent; cursor: pointer; }
       #game-controls { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; min-height: 0; padding: 3px 8px calc(3px + env(safe-area-inset-bottom)); background: #000; border-top: 1px solid #383838; touch-action: none; }
       #game-controls .control-row { display: flex; justify-content: center; }
       #game-controls button { width: clamp(42px, 12vw, 60px); height: clamp(42px, 12vw, 60px); margin: 1px clamp(3px, 1.2vw, 5px); border-radius: clamp(10px, 2.5vw, 15px); background: rgba(18,18,18,0.9); border: 1.5px solid #fff; color: #fff; font: 700 clamp(19px, 5vw, 24px)/1 system-ui, sans-serif; display: flex; justify-content: center; align-items: center; touch-action: none; -webkit-tap-highlight-color: transparent; user-select: none; padding: 0; transition: background-color 90ms ease-out; }
@@ -91,7 +92,9 @@
         const canvas = document.getElementById("glcanvas");
         const music = new Audio("./assets/audio/bg-sound.ogg");
         music.loop = true;
-        music.preload = "auto";
+        // Do not compete with the WASM and visual assets during startup.
+        // The soundtrack is fetched when playback is first requested.
+        music.preload = "none";
         music.volume = 0.05;
         let started = false;
         let paused = false;
@@ -118,22 +121,6 @@
         const pause = () => music.pause();
 
         const soundButton = document.getElementById("sound-toggle");
-        const updateSoundButtonPosition = () => {
-          const rect = canvas.getBoundingClientRect();
-          if (!rect.width || !rect.height) return;
-          const scale = Math.min(rect.width / 800, rect.height / 600);
-          const offsetX = (rect.width - 800 * scale) / 2;
-          const offsetY = (rect.height - 600 * scale) / 2;
-          soundButton.style.display = "flex";
-          soundButton.style.left = `${rect.left + offsetX + 670 * scale}px`;
-          soundButton.style.top = `${rect.top + offsetY + 18 * scale}px`;
-          soundButton.style.width = `${112 * scale}px`;
-          soundButton.style.height = `${34 * scale}px`;
-          soundButton.style.minWidth = "0";
-          soundButton.style.minHeight = "0";
-          soundButton.style.padding = `${5 * scale}px ${7 * scale}px`;
-          soundButton.style.fontSize = `${Math.max(9, 18 * scale)}px`;
-        };
         const updateSoundButton = () => {
           soundButton.textContent = muted ? "SOUND OFF" : "SOUND ON";
           soundButton.setAttribute("aria-pressed", String(muted));
@@ -148,16 +135,12 @@
           updateSoundButton();
           if (!muted) startAudio();
         };
-        soundButton.addEventListener("pointerdown", (event) => {
+        soundButton.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();
-          if (!started) startAudio();
           toggleMute();
         });
         canvas.addEventListener("pointerdown", startAudio);
-        window.addEventListener("resize", updateSoundButtonPosition);
-        window.addEventListener("scroll", updateSoundButtonPosition, { passive: true });
-        updateSoundButtonPosition();
         updateSoundButton();
         window.addEventListener("keydown", (event) => {
           if (event.code === "Space" && !started) {
