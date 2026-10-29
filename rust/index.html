@@ -26,67 +26,11 @@
       </div>
     </nav>
     <script>
-      // Forward held D-pad presses to the same keyboard path used by Macroquad.
-      // Dispatch from the canvas so listeners attached to the canvas or window receive them.
+      // Forward held D-pad presses to Macroquad's keyboard input path.
       (() => {
         const controls = document.getElementById("game-controls");
         const canvas = document.getElementById("glcanvas");
         const activeKeys = new Set();
-        // Use the same browser-native WebM soundtrack as the React version. Calling
-        // play() synchronously from the trusted pointer/keyboard event avoids WebAudio
-        // autoplay restrictions that can swallow a start request from the WASM frame loop.
-        const music = new Audio("./assets/audio/bg-sound.ogg");
-        music.loop = true;
-        music.preload = "auto";
-        music.volume = 0.05;
-        let gameStarted = false;
-        let paused = false;
-        let muted = false;
-        const startMusic = () => {
-          if (muted) return;
-          const result = music.play();
-          if (result && typeof result.catch === "function") result.catch(() => {});
-        };
-        const pauseMusic = () => music.pause();
-        const canvasGamePoint = (event) => {
-          const rect = canvas.getBoundingClientRect();
-          const scale = Math.min(rect.width / 800, rect.height / 600);
-          if (!scale) return null;
-          const ox = (rect.width - 800 * scale) / 2;
-          const oy = (rect.height - 600 * scale) / 2;
-          return { x: (event.clientX - rect.left - ox) / scale, y: 600 - (event.clientY - rect.top - oy) / scale };
-        };
-        canvas.addEventListener("pointerdown", (event) => {
-          const point = canvasGamePoint(event);
-          if (!point) return;
-          if (!gameStarted && point.x >= 300 && point.x <= 500 && point.y >= 372 && point.y <= 426) {
-            gameStarted = true;
-            paused = false;
-            startMusic();
-          } else if (point.x >= 670 && point.x <= 782 && point.y >= 18 && point.y <= 52) {
-            muted = !muted;
-            if (muted) pauseMusic(); else if (gameStarted && !paused) startMusic();
-          } else if (gameStarted && point.x >= 570 && point.x <= 658 && point.y >= 18 && point.y <= 52) {
-            paused = !paused;
-            if (paused) pauseMusic(); else startMusic();
-          } else if (paused && point.x >= 250 && point.x <= 390 && point.y >= 320 && point.y <= 364) {
-            paused = false;
-            startMusic();
-          } else if (paused && point.x >= 410 && point.x <= 550 && point.y >= 320 && point.y <= 364) {
-            paused = false;
-            gameStarted = false;
-            pauseMusic();
-          } else if (gameStarted && point.y >= 320 && point.y <= 364 && point.x >= 250 && point.x <= 390) {
-            paused = false;
-            startMusic();
-          }
-        });
-        window.addEventListener("keydown", (event) => {
-          if (event.code === "Space" && !gameStarted) { gameStarted = true; paused = false; startMusic(); }
-          if (event.code === "KeyP" && gameStarted) { paused = !paused; if (paused) pauseMusic(); else startMusic(); }
-          if (event.code === "KeyM") { muted = !muted; if (muted) pauseMusic(); else if (gameStarted && !paused) startMusic(); }
-          if (event.code === "KeyR" && gameStarted) { gameStarted = false; paused = false; pauseMusic(); }
-        });
         const emit = (button, type) => {
           const key = button.dataset.key;
           const keyCode = Number(button.dataset.keyCode);
@@ -116,9 +60,7 @@
           button.addEventListener("lostpointercapture", () => release(button));
           button.addEventListener("contextmenu", (event) => event.preventDefault());
         });
-        window.addEventListener("blur", () => {
-          controls.querySelectorAll("button[data-key]").forEach(release);
-        });
+        window.addEventListener("blur", () => controls.querySelectorAll("button[data-key]").forEach(release));
       })();
     </script>
     <script>
@@ -129,8 +71,7 @@
     </script>
     <script src="./mq_js_bundle.js"></script>
     <script>
-      // Start the OGG soundtrack directly inside the user's trusted gesture so
-      // mobile browsers do not reject playback from an asynchronous WASM callback.
+      // Use one native HTMLAudioElement and start it synchronously from a user gesture.
       (() => {
         const canvas = document.getElementById("glcanvas");
         const music = new Audio("./assets/audio/bg-sound.ogg");
@@ -140,46 +81,59 @@
         let started = false;
         let paused = false;
         let muted = false;
+
+        music.addEventListener("error", () => {
+          console.error("[Wave Rider audio] Failed to load OGG soundtrack.", {
+            src: music.currentSrc || music.src,
+            code: music.error?.code,
+            message: music.error?.message
+          });
+        });
+        music.addEventListener("canplay", () => console.info("[Wave Rider audio] OGG is ready to play."));
+        music.addEventListener("playing", () => console.info("[Wave Rider audio] Playback started."));
+        music.addEventListener("pause", () => console.info("[Wave Rider audio] Playback paused."));
+
         const play = () => {
           if (muted) return;
           const promise = music.play();
-          if (promise && promise.catch) promise.catch(() => {});
+          if (promise && typeof promise.catch === "function") {
+            promise.catch((error) => console.error("[Wave Rider audio] Playback rejected:", error.name, error.message));
+          }
         };
-        const stop = () => music.pause();
-        const pointFromEvent = (event) => {
-          const rect = canvas.getBoundingClientRect();
-          const scale = Math.min(rect.width / 800, rect.height / 600);
-          if (!scale) return null;
-          const ox = (rect.width - 800 * scale) / 2;
-          const oy = (rect.height - 600 * scale) / 2;
-          return { x: (event.clientX - rect.left - ox) / scale, y: 600 - (event.clientY - rect.top - oy) / scale };
-        };
-        canvas.addEventListener("pointerdown", (event) => {
-          const p = pointFromEvent(event);
-          if (!p) return;
-          if (!started && p.x >= 280 && p.x <= 520 && p.y >= 360 && p.y <= 440) {
+        const pause = () => music.pause();
+
+        // Avoid guessed canvas coordinates; CSS scaling differs across screen sizes.
+        canvas.addEventListener("pointerdown", () => {
+          if (!started) {
             started = true;
-            paused = false;
-            play();
-          } else if (p.x >= 660 && p.x <= 790 && p.y >= 12 && p.y <= 58) {
-            muted = !muted;
-            music.muted = muted;
-            if (!muted && started && !paused) play();
-          } else if (started && p.x >= 560 && p.x <= 665 && p.y >= 12 && p.y <= 58) {
-            paused = !paused;
-            if (paused) stop(); else play();
-          } else if (paused && p.y >= 300 && p.y <= 390) {
             paused = false;
             play();
           }
         });
         window.addEventListener("keydown", (event) => {
-          if (event.code === "Space" && !started) { started = true; paused = false; play(); }
-          if (event.code === "KeyP" && started) { paused = !paused; if (paused) stop(); else play(); }
-          if (event.code === "KeyM") { muted = !muted; music.muted = muted; if (!muted && started && !paused) play(); }
-          if (event.code === "KeyR" && started) { started = false; paused = false; stop(); }
+          if (event.code === "Space" && !started) {
+            started = true;
+            paused = false;
+            play();
+          } else if (event.code === "KeyP" && started) {
+            paused = !paused;
+            if (paused) pause(); else play();
+          } else if (event.code === "KeyM") {
+            muted = !muted;
+            music.muted = muted;
+            if (!muted && started && !paused) play();
+          } else if (event.code === "KeyR" && started) {
+            started = false;
+            paused = false;
+            pause();
+          }
         });
-        if (typeof load === "function") load("./wave_rider_nusantara.wasm");
+
+        if (typeof load === "function") {
+          load("./wave_rider_nusantara.wasm");
+        } else {
+          console.error("[Wave Rider] Macroquad loader function is unavailable.");
+        }
       })();
     </script>
   </body>
