@@ -71,16 +71,74 @@
     </script>
     <script src="./mq_js_bundle.js" onerror="document.getElementById('startup-status').hidden=false;document.getElementById('startup-status').textContent='Could not load the Macroquad JavaScript loader (mq_js_bundle.js).';"></script>
     <script>
-      try {
-        if (typeof load !== "function") {
-          throw new Error("Macroquad loader did not initialize: load() is missing.");
-        }
-        load("./wave_rider_nusantara.wasm");
-      } catch (error) {
+      (async () => {
         const status = document.getElementById("startup-status");
-        status.hidden = false;
-        status.textContent = "Could not start WebAssembly: " + (error && error.message ? error.message : String(error));
-      }
+        const showFailure = (title, detail) => {
+          status.hidden = false;
+          status.replaceChildren();
+          const heading = document.createElement("strong");
+          heading.textContent = title;
+          const message = document.createElement("div");
+          message.textContent = detail;
+          status.append(heading, message);
+        };
+        const requiredFiles = [
+          "./wave_rider_nusantara.wasm",
+          "./assets/images/bg.webp",
+          "./assets/images/gatot-1.webp",
+          "./assets/images/gatot-2.webp",
+          "./assets/images/gatot-hit.webp",
+          "./assets/images/gatot-collect.webp",
+          "./assets/images/bomb.webp",
+          "./assets/images/collect-1.webp",
+          "./assets/images/collect-2.webp",
+          "./assets/images/collect-3.webp",
+          "./assets/images/collect-4.webp",
+          "./assets/fonts/OpenSans-SemiBold.ttf"
+        ];
+        try {
+          status.hidden = false;
+          status.replaceChildren();
+          const heading = document.createElement("strong");
+          heading.textContent = "Wave Rider Nusantara — startup diagnostic build";
+          const message = document.createElement("div");
+          message.textContent = "Checking WebAssembly and game assets…";
+          status.append(heading, message);
+
+          const checks = await Promise.all(requiredFiles.map(async (path) => {
+            try {
+              const response = await fetch(path, { method: "GET", cache: "no-store" });
+              if (!response.ok) return path + " returned HTTP " + response.status;
+              if (path.endsWith(".wasm")) {
+                const bytes = await response.arrayBuffer();
+                if (bytes.byteLength < 8) return path + " is empty or too small (" + bytes.byteLength + " bytes)";
+                const magic = new Uint8Array(bytes.slice(0, 4));
+                if (magic[0] !== 0 || magic[1] !== 97 || magic[2] !== 115 || magic[3] !== 109) {
+                  return path + " did not return a valid WebAssembly file";
+                }
+              } else {
+                await response.body?.cancel();
+              }
+              return null;
+            } catch (error) {
+              return path + " failed: " + (error && error.message ? error.message : String(error));
+            }
+          }));
+          const failures = checks.filter(Boolean);
+          if (failures.length) {
+            showFailure("Required game files failed to load", failures.join(" | "));
+            return;
+          }
+          if (typeof load !== "function") {
+            showFailure("Macroquad loader unavailable", "mq_js_bundle.js loaded without defining load(). Check the loader file and its response.");
+            return;
+          }
+          message.textContent = "All required files responded successfully. Starting the Rust WebAssembly game…";
+          load("./wave_rider_nusantara.wasm");
+        } catch (error) {
+          showFailure("Could not start WebAssembly", error && error.message ? error.message : String(error));
+        }
+      })();
     </script>
   </body>
 </html>
