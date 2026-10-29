@@ -148,15 +148,24 @@ async fn main() {
         load_ttf_font("assets/fonts/OpenSans-SemiBold.ttf"),
     );
     let font = font.expect("Could not load OpenSans");
+    // Show the actual game menu in the very first frame. Gameplay-only sprites
+    // can take longer to download on mobile, so do not leave a loading message
+    // on screen while those non-critical assets are fetched.
     clear_background(BLACK);
     draw_texture_ex(&bg, 0.0, 0.0, WHITE, DrawTextureParams {
         dest_size: Some(vec2(W, H)),
         ..Default::default()
     });
-    let loading = "Loading Wave Rider Nusantara...";
-    let loading_metrics = measure_text(loading, Some(&font), 24, 1.0);
-    draw_text_ex(loading, (W - loading_metrics.width) / 2.0, H / 2.0,
-        TextParams { font: Some(&font), font_size: 24, color: WHITE, ..Default::default() });
+    draw_rectangle(0.0, 0.0, W, H, Color::new(0.0, 0.0, 0.0, 0.24));
+    glass(Rect::new(140.0, 105.0, 520.0, 390.0), 0.86);
+    centered_text("Penunggang Gelombang Nusantara", 400.0, 165.0, 27, BLACK, &font);
+    centered_text("Dibuat oleh Abu Sofian", 400.0, 191.0, 14, Color::new(0.04, 0.04, 0.04, 1.0), &font);
+    glass(Rect::new(275.0, 214.0, 250.0, 40.0), 0.4);
+    centered_text("English       Indonesia", 400.0, 239.0, 16, BLACK, &font);
+    centered_text("Bantu Gatotkaca menangkap Pola Batik, hindari BOM!", 400.0, 294.0, 14, Color::new(0.04, 0.04, 0.04, 1.0), &font);
+    centered_text("SPASI mulai • PANAH/WASD bergerak • P untuk jeda", 400.0, 322.0, 13, Color::new(0.04, 0.04, 0.04, 1.0), &font);
+    glass(Rect::new(300.0, 372.0, 200.0, 54.0), 0.9);
+    centered_text("MULAI", 400.0, 405.0, 22, BLACK, &font);
     next_frame().await;
 
     let a = assets(bg, font).await;
