@@ -142,6 +142,12 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
+    // Paint a first frame before waiting for image/font downloads, so the
+    // canvas is not blank while the parallel asset requests are in flight.
+    clear_background(BLACK);
+    draw_text("Loading Wave Rider Nusantara...", 24.0, 48.0, 24.0, WHITE);
+    next_frame().await;
+
     let a = assets().await;
     let scale_player = (TARGET_SIZE / a.idle[0].width()).min(TARGET_SIZE / a.idle[0].height());
     let mut player = Player::new(a.idle[0].width() * scale_player, a.idle[0].height() * scale_player);
