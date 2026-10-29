@@ -179,10 +179,6 @@
           if (event.code === "KeyM") { muted = !muted; music.muted = muted; if (!muted && started && !paused) play(); }
           if (event.code === "KeyR" && started) { started = false; paused = false; stop(); }
         });
-        const status = document.createElement("div");
-        status.hidden = true;
-        status.setAttribute("aria-live", "off");
-        document.body.append(status);
         if (typeof load === "function") load("./wave_rider_nusantara.wasm");
       })();
     </script>
