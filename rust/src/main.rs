@@ -156,7 +156,9 @@ async fn main() {
         let click = is_mouse_button_pressed(MouseButton::Left) || touch_click;
 
         clear_background(BLACK);
-        let mut camera = Camera2D::from_display_rect(Rect::new(0.0, 0.0, W, H));
+        // Macroquad's display-rect camera uses a bottom-left origin. Use a negative
+        // height so our game keeps the web version's top-left, y-down coordinates.
+        let mut camera = Camera2D::from_display_rect(Rect::new(0.0, H, W, -H));
         camera.viewport = Some((ox as i32, oy as i32, vw as i32, vh as i32));
         set_camera(&camera);
 
