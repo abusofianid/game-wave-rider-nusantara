@@ -45,3 +45,5 @@ jobs:
           git add rust/assets/audio/bg-sound.ogg rust/assets/audio/bg-sound.webm
           git commit -m "Replace Rust WebM soundtrack with OGG"
           git push
+
+# Re-trigger conversion workflow after setup.
