@@ -14,7 +14,7 @@ rustup target add wasm32-unknown-unknown
 bash scripts/prepare-audio.sh
 cargo build --release --target wasm32-unknown-unknown
 mkdir -p web
-cp target/wasm32-unknown-unknown/release/wave_rider_nusantara.wasm web/
+cp target/wasm32-unknown-unknown/release/wave-rider-nusantara.wasm web/wave_rider_nusantara.wasm
 curl --proto '=https' --tlsv1.2 -fsSL https://not-fl3.github.io/miniquad-samples/mq_js_bundle.js -o web/mq_js_bundle.js
 
 sed 's#./web/#./#g' index.html > web/index.html
