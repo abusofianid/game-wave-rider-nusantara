@@ -1,0 +1,26 @@
+name: Rust checks
+
+on:
+  push:
+    branches: [rust]
+    paths:
+      - "rust/**"
+      - ".github/workflows/rust-check.yml"
+  pull_request:
+    paths:
+      - "rust/**"
+      - ".github/workflows/rust-check.yml"
+  workflow_dispatch:
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Check desktop target
+        run: cargo check --manifest-path rust/Cargo.toml
+      - name: Check WebAssembly target
+        run: cargo check --manifest-path rust/Cargo.toml --target wasm32-unknown-unknown
