@@ -56,7 +56,7 @@ struct Collectible { thing: Thing, kind: usize }
 
 struct Assets {
     bg: Texture2D, idle: [Texture2D; 2], hit: Texture2D, collect: Texture2D,
-    bomb: Texture2D, batik: [Texture2D; 4], font: Font, music: Sound,
+    bomb: Texture2D, batik: [Texture2D; 4], font: Font,
 }
 async fn texture(path: &str) -> Texture2D {
     let t = load_texture(path).await.unwrap_or_else(|e| panic!("Could not load {path}: {e}"));
@@ -77,7 +77,6 @@ async fn assets() -> Assets {
             texture("assets/images/collect-4.webp").await,
         ],
         font: load_ttf_font("assets/fonts/OpenSans-SemiBold.ttf").await.expect("Could not load OpenSans"),
-        music: load_sound("assets/audio/bg-sound.ogg").await.expect("Could not load soundtrack"),
     }
 }
 fn collision(ax: f32, ay: f32, aw: f32, ah: f32, bx: f32, by: f32, bw: f32, bh: f32) -> bool {
@@ -122,6 +121,7 @@ fn reset(p: &mut Player, bombs: &mut Vec<Thing>, items: &mut Vec<Collectible>, s
 
 #[macroquad::main("Wave Rider Nusantara")]
 async fn main() {
+    console_error_panic_hook::set_once();
     let a = assets().await;
     let scale_player = (TARGET_SIZE / a.idle[0].width()).min(TARGET_SIZE / a.idle[0].height());
     let mut player = Player::new(a.idle[0].width() * scale_player, a.idle[0].height() * scale_player);
@@ -134,6 +134,7 @@ async fn main() {
     let mut language = 1_usize;
     let mut muted = false;
     let mut music_started = false;
+    let mut music: Option<Sound> = None;
 
     loop {
         let dt = get_frame_time().min(0.05);
@@ -220,9 +221,11 @@ async fn main() {
         }
 
         if music_started {
-            // Macroquad does not expose pause/resume for Sound; silence while menus are open.
-            let volume = if muted || state != GameState::Playing { 0.0 } else { 0.05 };
-            set_sound_volume(&a.music, volume);
+            // Audio is optional and must never prevent the game from remaining playable.
+            if let Some(sound) = music.as_ref() {
+                let volume = if muted || state != GameState::Playing { 0.0 } else { 0.05 };
+                set_sound_volume(sound, volume);
+            }
         }
 
         draw_scene(&a, &player, &bombs, &items, state);
@@ -247,8 +250,12 @@ async fn main() {
                     Color::new(0.16, 0.65, 0.27, 1.0), &a.font, mouse, click) || is_key_pressed(KeyCode::Space) {
                     state = GameState::Playing;
                     if !music_started {
-                        play_sound(&a.music, PlaySoundParams { looped: true, volume: if muted { 0.0 } else { 0.05 } });
                         music_started = true;
+                        // Load audio only after the user gesture; failure should not block gameplay.
+                        if let Ok(sound) = load_sound("assets/audio/bg-sound.ogg").await {
+                            play_sound(&sound, PlaySoundParams { looped: true, volume: if muted { 0.0 } else { 0.05 } });
+                            music = Some(sound);
+                        }
                     }
                 }
             }
