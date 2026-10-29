@@ -85,6 +85,10 @@ fn collision(ax: f32, ay: f32, aw: f32, ah: f32, bx: f32, by: f32, bw: f32, bh: 
 fn text(s: &str, x: f32, y: f32, size: u16, color: Color, font: &Font) {
     draw_text_ex(s, x, y, TextParams { font: Some(font), font_size: size, color, ..Default::default() });
 }
+fn centered_text(s: &str, center_x: f32, y: f32, size: u16, color: Color, font: &Font) {
+    let metrics = measure_text(s, Some(font), size, 1.0);
+    text(s, center_x - metrics.width / 2.0, y, size, color, font);
+}
 fn glass(r: Rect, alpha: f32) {
     draw_rectangle(r.x, r.y, r.w, r.h, Color::new(1.0, 1.0, 1.0, alpha));
     draw_rectangle_lines(r.x, r.y, r.w, r.h, 1.0, Color::new(1.0, 1.0, 1.0, 0.55));
@@ -250,15 +254,15 @@ async fn main() {
             GameState::Menu => {
                 draw_rectangle(0.0, 0.0, W, H, Color::new(0.0, 0.0, 0.0, 0.24));
                 glass(Rect::new(140.0, 105.0, 520.0, 390.0), 0.86);
-                text(if en { "Wave Rider Nusantara" } else { "Penunggang Gelombang Nusantara" },
-                    if en { 226.0 } else { 207.0 }, 165.0, 27, BLACK, &a.font);
-                text(if en { "Created by Abu Sofian" } else { "Dibuat oleh Abu Sofian" }, 286.0, 191.0, 14, dark, &a.font);
+                centered_text(if en { "Wave Rider Nusantara" } else { "Penunggang Gelombang Nusantara" },
+                    400.0, 165.0, 27, BLACK, &a.font);
+                centered_text(if en { "Created by Abu Sofian" } else { "Dibuat oleh Abu Sofian" }, 400.0, 191.0, 14, dark, &a.font);
                 if button("English", Rect::new(275.0, 214.0, 120.0, 40.0), en, translucent, &a.font, mouse, click) { language = 0; }
                 if button("Indonesia", Rect::new(405.0, 214.0, 120.0, 40.0), !en, translucent, &a.font, mouse, click) { language = 1; }
-                text(if en { "Help Gatotkaca catch Batik Patterns, avoid BOMBS!" } else { "Bantu Gatotkaca menangkap Pola Batik, hindari BOM!" },
-                    190.0, 294.0, 14, dark, &a.font);
-                text(if en { "SPACE to start • ARROWS/WASD to move • P to pause" } else { "SPASI mulai • PANAH/WASD bergerak • P untuk jeda" },
-                    183.0, 322.0, 13, dark, &a.font);
+                centered_text(if en { "Help Gatotkaca catch Batik Patterns, avoid BOMBS!" } else { "Bantu Gatotkaca menangkap Pola Batik, hindari BOM!" },
+                    400.0, 294.0, 14, dark, &a.font);
+                centered_text(if en { "SPACE to start • ARROWS/WASD to move • P to pause" } else { "SPASI mulai • PANAH/WASD bergerak • P untuk jeda" },
+                    400.0, 322.0, 13, dark, &a.font);
                 if button(if en { "START" } else { "MULAI" }, Rect::new(300.0, 372.0, 200.0, 54.0), true,
                     Color::new(0.16, 0.65, 0.27, 1.0), &a.font, mouse, click) || is_key_pressed(KeyCode::Space) {
                     state = GameState::Playing;
