@@ -8,8 +8,9 @@ message: >-
   metadata from this file.
 type: software
 authors:
-  - given-names: Abu Sofian
+  - given-names: Abu
     email: abusofian.id@gmail.com
+    family-names: Sofian
 identifiers:
   - type: url
     value: 'https://waveridernusantara.vercel.app/'
