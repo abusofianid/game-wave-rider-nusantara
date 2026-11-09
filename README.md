@@ -15,7 +15,7 @@
 | [Rust](./rust/) | Rust game that can run as a desktop application or compile to WebAssembly for browsers | Rust, Macroquad, WebAssembly |
 | [Python](./python/) | Python desktop implementation | Python |
 
-The React version has a separate deployment at [waveridernusantara.b.id](https://waveridernusantara.web.id/). Availability of other hosted builds depends on their respective deployment configuration.
+The React version has a separate deployment at [waveridernusantara.web.id](https://waveridernusantara.web.id/). Availability of other hosted builds depends on their respective deployment configuration.
 
 ## Requirements
 
