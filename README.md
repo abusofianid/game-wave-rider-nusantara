@@ -7,6 +7,9 @@
 
 **Wave Rider Nusantara** is an arcade-style game inspired by the culture and visual identity of the Indonesian archipelago. This repository contains multiple implementations of the game.
 
+>This project is featured in the following awesome lists:  
+>✨ [awesome-open-source-games](https://github.com/michelpereira/awesome-open-source-games#arcade)
+
 ## Game versions
 
 | Version | Description | Technology |
@@ -112,12 +115,14 @@ The executable is generated in `python/dist/`. Packaging is optional; you can pl
 
 For the full Python project overview and implementation details, see the [Python README](./python/README.md).
 
-## Assets and licensing
+## License
 
-The Rust implementation reuses optimized WebP game artwork and a committed OGG Vorbis soundtrack. See the relevant source directories and license files before redistributing the game or its assets. The repository includes MIT and Apache-2.0 license files; check third-party asset attribution requirements separately.
+This project is licensed under the [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) and [MIT](https://opensource.org/license/mit).
 
 ## Contact
 
 - **Author:** Abu Sofian
 - **Email:** abusofian.id@gmail.com
 - **LinkedIn:** [linkedin.com/in/abusofianid](https://www.linkedin.com/in/abusofianid)
+
+**[⬆ Back to Top](#wave-rider-nusantara)**
