@@ -65,13 +65,7 @@ jobs:
             trap cleanup EXIT
             window_id=""
             for attempt in $(seq 1 30); do
-              window_id=$(xdotool search --onlyvisible --name ".*" 2>/dev/null | while read -r candidate; do
-                candidate_pid=$(xdotool getwindowpid "$candidate" 2>/dev/null || true)
-                if [ "$candidate_pid" = "$app_pid" ]; then
-                  echo "$candidate"
-                  break
-                fi
-              done)
+              window_id=$(xdotool search --onlyvisible --name ".*" 2>/dev/null | head -n 1 || true)
               if [ -n "$window_id" ] && grep -q "image ready: .*assets/images/bg.png" /tmp/wave-rider-app.log; then
                 break
               fi
