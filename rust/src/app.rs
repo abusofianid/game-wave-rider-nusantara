@@ -268,7 +268,11 @@ impl Render for GameApp {
 
         if self.game.state != GameState::GameOver {
             game_controls = game_controls.child(Self::action_button(
-                if self.game.state == GameState::Paused { "RESUME  •  P" } else { "PAUSE  •  P" },
+                if self.game.state == GameState::Paused {
+                    "RESUME  •  P"
+                } else {
+                    "PAUSE  •  P"
+                },
                 |this, cx| {
                     this.game.toggle_pause();
                     cx.notify();
