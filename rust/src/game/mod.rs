@@ -153,6 +153,13 @@ impl Game {
         self.state = GameState::Playing;
     }
 
+    pub fn start_from_control(&mut self) {
+        if self.state == GameState::GameOver {
+            self.restart();
+        }
+        self.start();
+    }
+
     pub fn toggle_pause(&mut self) {
         self.state = match self.state {
             GameState::Playing => GameState::Paused,
@@ -392,6 +399,22 @@ mod tests {
         game.tick(0.05);
         assert_eq!(game.player.x, 85.0);
         assert_eq!(game.player.y, 285.0);
+    }
+
+    #[test]
+    fn start_control_restarts_a_game_over_run_before_playing() {
+        let mut game = Game::default();
+        game.language = Language::English;
+        game.muted = true;
+        game.state = GameState::GameOver;
+        game.player.score = 120;
+        game.player.lives = 0;
+        game.start_from_control();
+        assert_eq!(game.state, GameState::Playing);
+        assert_eq!(game.player.score, 0);
+        assert_eq!(game.player.lives, 3);
+        assert_eq!(game.language, Language::English);
+        assert!(game.muted);
     }
 
     #[test]
