@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use async_io::Timer;
 use gpui::{
-    App, Bounds, Context, KeyDownEvent, KeyUpEvent, PaintQuad, PathBuilder, Pixels, Point, Render,
-    Window, WindowOptions, canvas, div, point, prelude::*, px, rgb, size,
+    App, Bounds, Context, KeyDownEvent, KeyUpEvent, PathBuilder, Pixels, Point, Render,
+    Window, WindowOptions, canvas, div, fill, point, prelude::*, px, rgb, size,
 };
 
 use crate::game::{
@@ -39,7 +39,7 @@ impl GameApp {
         app
     }
 
-    fn handle_key_down(&mut self, event: &KeyDownEvent, cx: &mut Context<Self>) {
+    fn handle_key_down(\n        &mut self,\n        event: &KeyDownEvent,\n        _window: &mut Window,\n        cx: &mut Context<Self>,\n    ) {
         let key = event.keystroke.key.as_str();
         match key {
             "left" | "a" => self.game.set_key(Direction::Left, true),
@@ -63,7 +63,7 @@ impl GameApp {
         cx.notify();
     }
 
-    fn handle_key_up(&mut self, event: &KeyUpEvent, cx: &mut Context<Self>) {
+    fn handle_key_up(\n        &mut self,\n        event: &KeyUpEvent,\n        _window: &mut Window,\n        cx: &mut Context<Self>,\n    ) {
         match event.keystroke.key.as_str() {
             "left" | "a" => self.game.set_key(Direction::Left, false),
             "right" | "d" => self.game.set_key(Direction::Right, false),
@@ -86,7 +86,7 @@ impl GameApp {
             .bg(rgb(0x1e3a8a))
             .text_color(rgb(0xffffff))
             .cursor_pointer()
-            .hover_style(|style| style.bg(rgb(0x2563eb)))
+            .hover(|style| style.bg(rgb(0x2563eb)))
             .child(label)
             .on_click(cx.listener(move |this, _, _, cx| action(this, cx)))
     }
