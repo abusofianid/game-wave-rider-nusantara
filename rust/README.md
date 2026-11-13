@@ -35,13 +35,14 @@ cargo build --release
 - Batik collection adds 10 points.
 - Temporary hit/collect feedback and a two-frame run-state animation counter.
 - English and Indonesian UI language choice.
-- Space starts, P pauses/resumes, R restarts after game-over, M toggles the mute preference.
+- Space starts, P pauses/resumes, R restarts after game-over, M toggles background music mute.
 - GPUI canvas scene using the original Python PNG background, Gatotkaca animation/feedback sprites, four Batik collectibles, and bomb sprite.
-- Vector primitives retained for the HUD and state overlays.
+- Vector primitives retained for the HUD, state overlays, and missing-asset fallbacks.
+- The original Ogg background track loops through Rodio at 10% volume; the M key and Sound control mute/unmute playback.
 
 ## Current port scope
 
-The core game model and scene loop are newly implemented from the Python source. The GPUI renderer now loads the original PNG assets from `rust/assets/images/` through GPUI's asset system. Background audio playback has not yet been ported; the mute toggle currently preserves the UI preference only. Audio integration and visual comparison against the Python version remain follow-up tasks.
+The core game model and scene loop are newly implemented from the Python source. The GPUI renderer loads the original PNG assets from `rust/assets/images/` through GPUI's asset system. Background music is looped from `rust/assets/audio/bg-sound.ogg` through Rodio. If no audio output device or decoder is available, the app logs a warning and continues without music. Live visual/gameplay comparison against the Python version remains a manual validation task.
 
 ## CI
 
