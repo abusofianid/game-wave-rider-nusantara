@@ -81,6 +81,7 @@ impl WaveRiderApp {
         cx: &Context<Self>,
     ) -> impl IntoElement {
         div()
+            .id(label)
             .px_4()
             .py_3()
             .rounded_lg()
