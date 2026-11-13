@@ -66,8 +66,7 @@ jobs:
           mkdir -p dist/package
           cp rust/target/release/wave-rider-nusantara dist/package/
           cp README.md LICENSE-MIT LICENSE-APACHE dist/package/
-          tar -C dist -czf "dist/${{ matrix.artifact }}.tar.gz" package
-          mv "dist/${{ matrix.artifact }}.tar.gz" dist/
+          tar -czf "dist/${{ matrix.artifact }}.tar.gz" -C dist package
 
       - name: Package Windows binary
         if: runner.os == 'Windows'
