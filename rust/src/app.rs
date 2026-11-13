@@ -12,7 +12,7 @@ use async_io::Timer;
 use gpui::{
     App, Bounds, Context, Corners, FocusHandle, ImgResourceLoader, InteractiveElement,
     KeyDownEvent, KeyUpEvent, PathBuilder, Pixels, Point, Render, RenderImage, Resource,
-    StatefulInteractiveElement, Window, WindowOptions, canvas, div, fill, point, prelude::*, px,
+    StatefulInteractiveElement, Window, canvas, div, fill, point, prelude::*, px,
     rgb, rgba, size,
 };
 
@@ -109,11 +109,13 @@ pub struct GameApp {
 }
 
 impl GameApp {
-    pub fn new(cx: &mut Context<Self>) -> Self {
+    pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let focus_handle = cx.focus_handle().tab_stop(true);
+        window.focus(&focus_handle, cx);
         let app = Self {
             game: Game::default(),
             audio: AudioController::new(),
-            focus_handle: cx.focus_handle().tab_stop(true),
+            focus_handle,
         };
         cx.spawn(async move |weak, cx| {
             loop {
