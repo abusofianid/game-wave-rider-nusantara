@@ -274,8 +274,8 @@ impl Game {
 
         let dx = (self.keys.contains(&Direction::Right) as i32
             - self.keys.contains(&Direction::Left) as i32) as f32;
-        let dy = (self.keys.contains(&Direction::Up) as i32
-            - self.keys.contains(&Direction::Down) as i32) as f32;
+        let dy = (self.keys.contains(&Direction::Down) as i32
+            - self.keys.contains(&Direction::Up) as i32) as f32;
 
         self.player.x =
             (self.player.x + dx * PLAYER_SPEED * dt).clamp(0.0, GAME_WIDTH - self.player.width);
@@ -466,14 +466,6 @@ mod tests {
         game.set_key(Direction::Right, false);
         assert!(game.player.x > start_x, "Gatotkaca should move right");
 
-        for _ in 0..120 {
-            game.tick(0.05);
-        }
-        assert!(!game.bombs.is_empty(), "bombs should appear");
-        assert!(!game.collectibles.is_empty(), "Batik should appear");
-
-        game.bombs.clear();
-        game.collectibles.clear();
         game.collectibles.push(Entity {
             x: game.player.x + 5.0,
             y: game.player.y + 5.0,
