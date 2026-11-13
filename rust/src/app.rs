@@ -762,13 +762,25 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
         PlayerFeedback::Collect => &game.gatot_collect,
     };
     if player_sprite.is_some() {
+        // Keep each original Gatotkaca PNG aspect ratio. The gameplay hitbox
+        // remains 70x70; the artwork is contained and centered inside it.
+        let (source_width, source_height) = match game.player_feedback {
+            PlayerFeedback::Normal if game.animation_frame == 0 => (302.0, 808.0),
+            PlayerFeedback::Normal => (330.0, 791.0),
+            PlayerFeedback::Collect => (582.0, 906.0),
+            PlayerFeedback::Hit => (456.0, 812.0),
+        };
+        let sprite_height = 70.0_f32.min(70.0);
+        let sprite_width = sprite_height * source_width / source_height;
+        let sprite_x = game.player_x + (70.0 - sprite_width) / 2.0;
+        let sprite_y = game.player_y + (70.0 - sprite_height) / 2.0;
         paint_sprite(
             bounds,
             window,
-            game.player_x,
-            game.player_y,
-            70.0,
-            70.0,
+            sprite_x,
+            sprite_y,
+            sprite_width,
+            sprite_height,
             player_sprite,
         );
     } else {
