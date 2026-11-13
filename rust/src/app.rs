@@ -416,7 +416,11 @@ impl Render for GameApp {
                         .top(px(16.))
                         .right(px(16.))
                         .child(Self::action_button(
-                            if self.game.muted { "SOUND OFF" } else { "SOUND ON" },
+                            if self.game.muted {
+                                "SOUND OFF"
+                            } else {
+                                "SOUND ON"
+                            },
                             |this, cx| {
                                 this.toggle_mute();
                                 cx.notify();
