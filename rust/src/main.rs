@@ -84,6 +84,13 @@ impl AssetSource for Assets {
 
 fn main() {
     application().with_assets(Assets).run(|cx: &mut App| {
+        cx.text_system()
+            .add_fonts(vec![Cow::Borrowed(include_bytes!(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/../python/assets/fonts/OpenSans-SemiBold.ttf"
+            )))])
+            .expect("failed to register Open Sans font");
+
         cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new(|cx| GameApp::new(window, cx))
         })
