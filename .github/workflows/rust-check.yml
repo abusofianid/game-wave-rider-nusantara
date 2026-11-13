@@ -1,11 +1,6 @@
 name: Native Rust GPUI checks
 
 on:
-  push:
-    branches: [rust, gpui-from-python]
-    paths:
-      - "rust/**"
-      - ".github/workflows/rust-check.yml"
   pull_request:
     paths:
       - "rust/**"
@@ -37,18 +32,6 @@ jobs:
             libxcb-render0-dev \
             libxcb-shape0-dev \
             libxcb-xfixes0-dev
-      - name: Format Rust sources
-        run: cargo fmt --manifest-path rust/Cargo.toml --all
-      - name: Commit formatting on branch pushes
-        if: github.event_name == 'push'
-        run: |
-          if ! git diff --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add rust/src
-            git commit -m "Format native GPUI Rust sources"
-            git push origin "HEAD:${GITHUB_REF_NAME}"
-          fi
       - name: Verify formatting
         run: cargo fmt --manifest-path rust/Cargo.toml --all -- --check
       - name: Check native application
