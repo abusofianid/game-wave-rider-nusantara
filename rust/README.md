@@ -1,22 +1,30 @@
 # Wave Rider Nusantara — Native GPUI Desktop
 
-A native Rust desktop rebuild of the Python/Pyglet edition of Wave Rider Nusantara. The gameplay model is ported from `python/main.py`; GPUI provides the native application window, keyboard input, and GPU-backed custom scene painting.
+A native Rust desktop endless runner. This edition rebuilds the gameplay model from the Python/Pyglet implementation and uses GPUI for the desktop window, keyboard input, layout, and GPU-backed scene rendering.
 
-## Stack
+## Technology
 
 - Rust (Edition 2024)
-- GPUI (GPUI Unofficial distribution)
-- Native desktop application (Linux, macOS, Windows supported by GPUI platform layer)
+- GPUI Unofficial distribution and platform layer
+- Rodio for looping Ogg background music
+- Native desktop builds for Linux, Windows, and macOS (built on each platform's native runner)
+
+## Requirements
+
+- Stable Rust toolchain with Rust 2024 edition support.
+- Linux: GPUI development libraries such as X11, XKB, Wayland, Fontconfig, ALSA, and XCB development packages. On Debian/Ubuntu, install the package list in the repository root README.
+- Windows: Visual Studio C++ Build Tools and the Windows SDK.
+- macOS: Xcode Command Line Tools.
 
 ## Run locally
 
-Install a stable Rust toolchain and the native platform dependencies required by GPUI. From this directory:
+From this directory:
 
 ```sh
 cargo run
 ```
 
-Run gameplay model tests and check the code:
+Build and validate:
 
 ```sh
 cargo fmt --all -- --check
@@ -25,29 +33,61 @@ cargo test
 cargo build --release
 ```
 
-## Gameplay port
+## Gameplay
 
-- Menu, playing, paused, and game-over state flow.
-- Gatotkaca player movement with arrow keys or WASD and window-bound clamping.
-- Continuous side-scrolling entities, dynamic bomb and batik spawn, and increasing game speed.
-- AABB collision checks and spawn-overlap prevention.
-- Bomb collision reduces three lives; game-over is reached at zero lives.
-- Batik collection adds 10 points.
-- Temporary hit/collect feedback and a two-frame run-state animation counter.
-- English and Indonesian UI language choice.
-- Space starts, P pauses/resumes, R restarts after game-over, M toggles background music mute.
-- GPUI canvas scene using the original Python PNG background, Gatotkaca animation/feedback sprites, four Batik collectibles, and bomb sprite.
-- Vector primitives retained for the HUD, state overlays, and missing-asset fallbacks.
-- The original Ogg background track loops through Rodio at 10% volume; the M key and Sound control mute/unmute playback.
+- Menu, playing, paused, and game-over states.
+- Gatotkaca movement with arrow keys or W/A/S/D.
+- Continuous side-scrolling bombs and four Batik collectible types.
+- Dynamic spawning, randomized entity sizes, overlap prevention, and progressive game speed.
+- AABB collision detection and a three-life system.
+- Each collected Batik adds 10 points; bomb collisions remove one life.
+- Two-frame running animation and temporary hit/collection feedback.
+- English and Indonesian interface language choices.
+- Original background, Gatotkaca, bomb, and Batik artwork.
+- Looping Ogg soundtrack, volume set to 10%; M and the Sound control toggle mute.
 
-## Current port scope
+### Controls
 
-The core game model and scene loop are newly implemented from the Python source. The GPUI renderer loads the original PNG assets from `rust/assets/images/` through GPUI's asset system. Background music is looped from `rust/assets/audio/bg-sound.ogg` through Rodio. If no audio output device or decoder is available, the app logs a warning and continues without music. Live visual/gameplay comparison against the Python version remains a manual validation task.
+| Input | Action |
+| --- | --- |
+| Arrow keys or W / A / S / D | Move |
+| Space | Start from menu |
+| P | Pause / resume |
+| R | Restart after Game Over |
+| M | Mute / unmute music |
+
+## Assets and runtime behavior
+
+Image assets and background music are embedded at compile time. The executable can therefore run without the repository checkout, a `rust/assets` directory beside it, a browser, or a WebAssembly runtime.
+
+If the system has no audio output device or the soundtrack cannot be decoded, the game continues without music and writes a diagnostic message to standard error. Missing image resources use the renderer's vector fallback where available.
+
+## Build distribution packages
+
+The repository workflow builds native release binaries on Linux, Windows, and macOS runners. Pull requests and manual workflow runs validate the platform builds and upload short-lived artifacts. A tag named `rust-v*` also creates a GitHub Release containing the platform archives.
+
+See [GitHub Releases](https://github.com/abusofianid/game-wave-rider-nusantara/releases) for published packages.
+
+## Project structure
+
+```text
+rust/
+├── Cargo.toml
+├── README.md
+├── assets/
+│   ├── audio/
+│   └── images/
+└── src/
+    ├── main.rs       # GPUI application bootstrap and embedded asset source
+    ├── app.rs        # GPUI UI, rendering, input, and audio integration
+    └── game/
+        └── mod.rs    # Gameplay state, simulation, collisions, and tests
+```
 
 ## CI
 
-GitHub Actions runs formatting checks, `cargo check`, gameplay tests, and an optimized native release build on Linux.
+The checks workflow verifies formatting, native compilation, gameplay unit tests, release compilation, and a Linux/Xvfb startup smoke test with menu and gameplay screenshots. A separate build workflow compiles release binaries on all three desktop operating systems.
 
 ## License
 
-The repository contains MIT and Apache-2.0 license files at its root. Review those files and any third-party asset attribution requirements before redistributing source code or builds.
+The repository contains MIT and Apache-2.0 license files at its root. Review those files and any third-party asset attribution requirements before redistributing source code or binaries.
