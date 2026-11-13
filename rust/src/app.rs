@@ -41,7 +41,12 @@ impl GameApp {
         app
     }
 
-    fn handle_key_down(\n        &mut self,\n        event: &KeyDownEvent,\n        _window: &mut Window,\n        cx: &mut Context<Self>,\n    ) {
+    fn handle_key_down(
+        &mut self,
+        event: &KeyDownEvent,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let key = event.keystroke.key.as_str();
         match key {
             "left" | "a" => self.game.set_key(Direction::Left, true),
@@ -65,7 +70,12 @@ impl GameApp {
         cx.notify();
     }
 
-    fn handle_key_up(\n        &mut self,\n        event: &KeyUpEvent,\n        _window: &mut Window,\n        cx: &mut Context<Self>,\n    ) {
+    fn handle_key_up(
+        &mut self,
+        event: &KeyUpEvent,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         match event.keystroke.key.as_str() {
             "left" | "a" => self.game.set_key(Direction::Left, false),
             "right" | "d" => self.game.set_key(Direction::Right, false),
