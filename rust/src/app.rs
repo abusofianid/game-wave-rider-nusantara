@@ -489,23 +489,7 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
     );
 
     for (x, y, width, height) in &game.bombs {
-        paint_circle(bounds, window, *x, *y, *width, rgb(0x1f2937));
-        paint_circle(
-            bounds,
-            window,
-            *x + width * 0.25,
-            *y + height * 0.25,
-            width * 0.22,
-            rgb(0xef4444),
-        );
-        let fuse = scaled_point(bounds, *x + width * 0.55, *y + height * 0.05);
-        let fuse_end = scaled_point(bounds, *x + width * 0.78, *y - height * 0.1);
-        let mut path = PathBuilder::stroke(px(2.0));
-        path.move_to(fuse);
-        path.line_to(fuse_end);
-        if let Ok(path) = path.build() {
-            window.paint_path(path, rgb(0xfbbf24));
-        }
+        paint_sprite(bounds, window, *x, *y, *width, *height, &game.bomb_sprite);
     }
 
     for (x, y, width, height, kind) in &game.collectibles {
