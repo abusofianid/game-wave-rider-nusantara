@@ -59,6 +59,10 @@ impl AudioController {
         let player = Player::connect_new(&output.mixer());
         player.set_volume(0.1);
         player.append(music);
+        eprintln!(
+            "Wave Rider Nusantara: background music playback started (looped, {} bytes)",
+            BACKGROUND_MUSIC.len()
+        );
 
         Some(Self {
             _output: output,
@@ -827,6 +831,34 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
             } else {
                 rgb(0x7f1d1d)
             },
+        );
+    }
+}
+
+
+#[cfg(test)]
+mod audio_tests {
+    use super::*;
+    use rodio::Source;
+
+    #[test]
+    fn bundled_ogg_soundtrack_decodes_and_yields_audio_samples() {
+        assert!(
+            BACKGROUND_MUSIC.starts_with(b"OggS"),
+            "bundled soundtrack must be an OGG container"
+        );
+        assert!(
+            !BACKGROUND_MUSIC.is_empty(),
+            "bundled soundtrack must not be empty"
+        );
+
+        let decoder = Decoder::new(Cursor::new(BACKGROUND_MUSIC))
+            .expect("bundled OGG soundtrack must decode");
+        assert!(decoder.channels() > 0, "soundtrack must have audio channels");
+        assert!(decoder.sample_rate() > 0, "soundtrack must have a sample rate");
+        assert!(
+            decoder.take(4096).count() > 0,
+            "soundtrack must yield decoded audio samples"
         );
     }
 }
