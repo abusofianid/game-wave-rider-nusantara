@@ -13,10 +13,9 @@ struct Assets;
 impl AssetSource for Assets {
     fn load(&self, path: &str) -> anyhow::Result<Option<Cow<'static, [u8]>>> {
         let bytes: &'static [u8] = match path {
-            "assets/images/bg.png" => include_bytes!(concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/assets/images/bg.png"
-            )),
+            "assets/images/bg.png" => {
+                include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/bg.png"))
+            }
             "assets/images/gatot_1.png" => include_bytes!(concat!(
                 env!("CARGO_MANIFEST_DIR"),
                 "/assets/images/gatot_1.png"
