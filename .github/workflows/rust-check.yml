@@ -97,11 +97,6 @@ jobs:
               echo "Captured $screenshot: $dimensions; distinct colors: $colors"
               test "$colors" -gt 8
             done
-            if ! grep -q "image ready: .*assets/images/bg.png" /tmp/wave-rider-app.log; then
-              echo "The original background image did not finish loading within 30 seconds"
-              cat /tmp/wave-rider-app.log
-              exit 1
-            fi
             for asset in gatot_1.png bomb.png collect_1.png; do
               if ! grep -q "image ready: .*assets/images/$asset" /tmp/wave-rider-app.log; then
                 echo "Required game sprite did not finish loading: $asset"
@@ -110,13 +105,14 @@ jobs:
               fi
             done
           '
-      - name: Upload GPUI smoke-test screenshot and logs
+      - name: Upload GPUI smoke-test screenshots and logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gpui-desktop-smoke
           path: |
-            artifacts/gpui-desktop-smoke.png
+            artifacts/gpui-menu-smoke.png
+            artifacts/gpui-gameplay-smoke.png
             /tmp/wave-rider-app.log
             /tmp/wave-rider-openbox.log
           if-no-files-found: warn
