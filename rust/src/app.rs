@@ -1,4 +1,10 @@
-use std::{fs::File, path::PathBuf, sync::Arc, time::Duration};
+use std::{
+    collections::HashSet,
+    fs::File,
+    path::PathBuf,
+    sync::{Arc, Mutex, OnceLock},
+    time::Duration,
+};
 
 use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink, Player};
 
@@ -75,17 +81,24 @@ impl AudioController {
 }
 
 fn load_sprite(path: &str, window: &mut Window, cx: &mut App) -> Option<Arc<RenderImage>> {
+    static READY_ASSETS: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+
     let resource: Resource = PathBuf::from(path).into();
     match window.use_asset::<ImgResourceLoader>(&resource, cx) {
-        Some(Ok(image)) => Some(image),
+        Some(Ok(image)) => {
+            let ready_assets = READY_ASSETS.get_or_init(|| Mutex::new(HashSet::new()));
+            if let Ok(mut ready_assets) = ready_assets.lock()
+                && ready_assets.insert(path.to_owned())
+            {
+                eprintln!("Wave Rider Nusantara: image ready: {path}");
+            }
+            Some(image)
+        }
         Some(Err(error)) => {
             eprintln!("Wave Rider Nusantara: failed to load image asset {path}: {error}");
             None
         }
-        None => {
-            eprintln!("Wave Rider Nusantara: image asset is not available yet: {path}");
-            None
-        }
+        None => None,
     }
 }
 
