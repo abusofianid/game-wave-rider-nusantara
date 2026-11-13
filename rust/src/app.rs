@@ -1,4 +1,6 @@
-use std::{path::PathBuf, sync::Arc, time::Duration};
+use std::{fs::File, path::PathBuf, sync::Arc, time::Duration};
+
+use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink, Player};
 
 use async_io::Timer;
 use gpui::{
@@ -26,6 +28,51 @@ const BATIK_1: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/collec
 const BATIK_2: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/collect_2.png");
 const BATIK_3: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/collect_3.png");
 const BATIK_4: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/collect_4.png");
+const BACKGROUND_MUSIC: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/audio/bg-sound.ogg");
+
+struct AudioController {
+    _output: MixerDeviceSink,
+    player: Player,
+}
+
+impl AudioController {
+    fn new() -> Option<Self> {
+        let output = match DeviceSinkBuilder::open_default_sink() {
+            Ok(output) => output,
+            Err(error) => {
+                eprintln!("Wave Rider Nusantara: audio output unavailable: {error}");
+                return None;
+            }
+        };
+        let file = match File::open(BACKGROUND_MUSIC) {
+            Ok(file) => file,
+            Err(error) => {
+                eprintln!("Wave Rider Nusantara: background music could not be opened: {error}");
+                return None;
+            }
+        };
+        let music = match Decoder::new_looped(file) {
+            Ok(music) => music,
+            Err(error) => {
+                eprintln!("Wave Rider Nusantara: background music could not be decoded: {error}");
+                return None;
+            }
+        };
+
+        let player = Player::connect_new(&output.mixer());
+        player.set_volume(0.1);
+        player.append(music);
+
+        Some(Self {
+            _output: output,
+            player,
+        })
+    }
+
+    fn set_muted(&self, muted: bool) {
+        self.player.set_volume(if muted { 0.0 } else { 0.1 });
+    }
+}
 
 fn load_sprite(path: &str, window: &mut Window, cx: &mut App) -> Option<Arc<RenderImage>> {
     let resource: Resource = PathBuf::from(path).into();
@@ -36,6 +83,7 @@ fn load_sprite(path: &str, window: &mut Window, cx: &mut App) -> Option<Arc<Rend
 
 pub struct GameApp {
     game: Game,
+    audio: Option<AudioController>,
     focus_handle: FocusHandle,
 }
 
@@ -43,6 +91,7 @@ impl GameApp {
     pub fn new(cx: &mut Context<Self>) -> Self {
         let app = Self {
             game: Game::default(),
+            audio: AudioController::new(),
             focus_handle: cx.focus_handle().tab_stop(true),
         };
         cx.spawn(async move |weak, cx| {
@@ -86,7 +135,7 @@ impl GameApp {
                     self.game.restart();
                 }
             }
-            "m" => self.game.muted = !self.game.muted,
+            "m" => self.toggle_mute(),
             _ => {}
         }
         cx.notify();
@@ -119,6 +168,13 @@ impl GameApp {
             .hover(|style| style.bg(rgb(0x2563eb)))
             .child(label)
             .on_click(cx.listener(move |this, _, _, cx| action(this, cx)))
+    }
+
+    fn toggle_mute(&mut self) {
+        self.game.muted = !self.game.muted;
+        if let Some(audio) = &self.audio {
+            audio.set_muted(self.game.muted);
+        }
     }
 
     fn choose_language(&mut self, language: Language, cx: &mut Context<Self>) {
@@ -205,7 +261,7 @@ impl Render for GameApp {
             .child(Self::action_button(
                 "SOUND / M",
                 |this, cx| {
-                    this.game.muted = !this.game.muted;
+                    this.toggle_mute();
                     cx.notify();
                 },
                 cx,
@@ -249,7 +305,9 @@ impl Render for GameApp {
                             .font_weight(gpui::FontWeight::BOLD)
                             .child(lives_text),
                     )
-                    .child(div().text_sm().child(if self.game.muted {
+                    .child(div().text_sm().child(if self.audio.is_none() {
+                        "SOUND UNAVAILABLE"
+                    } else if self.game.muted {
                         "SOUND OFF"
                     } else {
                         "SOUND ON"
