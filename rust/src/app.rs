@@ -6,7 +6,9 @@ use gpui::{
     Window, WindowOptions, canvas, div, point, prelude::*, px, rgb, size,
 };
 
-use crate::game::{CollectibleKind, Direction, GAME_HEIGHT, GAME_WIDTH, Game, GameState, Language, PlayerFeedback};
+use crate::game::{
+    CollectibleKind, Direction, GAME_HEIGHT, GAME_WIDTH, Game, GameState, Language, PlayerFeedback,
+};
 
 const FRAME_TIME: Duration = Duration::from_millis(16);
 
@@ -16,18 +18,24 @@ pub struct GameApp {
 
 impl GameApp {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        let app = Self { game: Game::default() };
+        let app = Self {
+            game: Game::default(),
+        };
         cx.spawn(async move |weak, cx| {
             loop {
                 Timer::after(FRAME_TIME).await;
-                if weak.update(cx, |this, cx| {
-                    this.game.tick(FRAME_TIME.as_secs_f32());
-                    cx.notify();
-                }).is_err() {
+                if weak
+                    .update(cx, |this, cx| {
+                        this.game.tick(FRAME_TIME.as_secs_f32());
+                        cx.notify();
+                    })
+                    .is_err()
+                {
                     break;
                 }
             }
-        }).detach();
+        })
+        .detach();
         app
     }
 
@@ -112,40 +120,69 @@ impl Render for GameApp {
             (Language::English, GameState::Menu) => "Choose a language, then press SPACE to start",
             (Language::Indonesian, GameState::Menu) => "Pilih bahasa, lalu tekan SPASI untuk mulai",
             (Language::English, GameState::Playing) => "PLAYING • P to pause • M to mute",
-            (Language::Indonesian, GameState::Playing) => "BERMAIN • P untuk jeda • M untuk bisukan",
+            (Language::Indonesian, GameState::Playing) => {
+                "BERMAIN • P untuk jeda • M untuk bisukan"
+            }
             (Language::English, GameState::Paused) => "PAUSED • Press P to resume",
             (Language::Indonesian, GameState::Paused) => "JEDA • Tekan P untuk melanjutkan",
             (Language::English, GameState::GameOver) => "GAME OVER • Press R to restart",
-            (Language::Indonesian, GameState::GameOver) => "PERMAINAN BERAKHIR • Tekan R untuk ulang",
+            (Language::Indonesian, GameState::GameOver) => {
+                "PERMAINAN BERAKHIR • Tekan R untuk ulang"
+            }
         };
 
         let language_controls = div()
             .flex()
             .gap_2()
-            .child(Self::action_button("English", |this, cx| this.choose_language(Language::English, cx), cx))
-            .child(Self::action_button("Indonesia", |this, cx| this.choose_language(Language::Indonesian, cx), cx));
+            .child(Self::action_button(
+                "English",
+                |this, cx| this.choose_language(Language::English, cx),
+                cx,
+            ))
+            .child(Self::action_button(
+                "Indonesia",
+                |this, cx| this.choose_language(Language::Indonesian, cx),
+                cx,
+            ));
 
         let game_controls = div()
             .flex()
             .gap_2()
-            .child(Self::action_button("START / SPACE", |this, cx| {
-                if this.game.state == GameState::Menu || this.game.state == GameState::GameOver {
-                    this.game.start();
-                }
-                cx.notify();
-            }, cx))
-            .child(Self::action_button("PAUSE / P", |this, cx| {
-                this.game.toggle_pause();
-                cx.notify();
-            }, cx))
-            .child(Self::action_button("RESTART / R", |this, cx| {
-                this.game.restart();
-                cx.notify();
-            }, cx))
-            .child(Self::action_button("SOUND / M", |this, cx| {
-                this.game.muted = !this.game.muted;
-                cx.notify();
-            }, cx));
+            .child(Self::action_button(
+                "START / SPACE",
+                |this, cx| {
+                    if this.game.state == GameState::Menu || this.game.state == GameState::GameOver
+                    {
+                        this.game.start();
+                    }
+                    cx.notify();
+                },
+                cx,
+            ))
+            .child(Self::action_button(
+                "PAUSE / P",
+                |this, cx| {
+                    this.game.toggle_pause();
+                    cx.notify();
+                },
+                cx,
+            ))
+            .child(Self::action_button(
+                "RESTART / R",
+                |this, cx| {
+                    this.game.restart();
+                    cx.notify();
+                },
+                cx,
+            ))
+            .child(Self::action_button(
+                "SOUND / M",
+                |this, cx| {
+                    this.game.muted = !this.game.muted;
+                    cx.notify();
+                },
+                cx,
+            ));
 
         div()
             .id("wave-rider-root")
@@ -159,7 +196,12 @@ impl Render for GameApp {
             .text_color(rgb(0xf8fafc))
             .on_key_down(cx.listener(Self::handle_key_down))
             .on_key_up(cx.listener(Self::handle_key_up))
-            .child(div().text_xl().font_weight(gpui::FontWeight::BOLD).child(title))
+            .child(
+                div()
+                    .text_xl()
+                    .font_weight(gpui::FontWeight::BOLD)
+                    .child(title),
+            )
             .child(div().text_sm().text_color(rgb(0xb6d9ed)).child(subtitle))
             .child(
                 div()
@@ -167,9 +209,23 @@ impl Render for GameApp {
                     .justify_between()
                     .w_full()
                     .max_w(px(800.))
-                    .child(div().text_sm().font_weight(gpui::FontWeight::BOLD).child(score_text))
-                    .child(div().text_sm().font_weight(gpui::FontWeight::BOLD).child(lives_text))
-                    .child(div().text_sm().child(if self.game.muted { "SOUND OFF" } else { "SOUND ON" })),
+                    .child(
+                        div()
+                            .text_sm()
+                            .font_weight(gpui::FontWeight::BOLD)
+                            .child(score_text),
+                    )
+                    .child(
+                        div()
+                            .text_sm()
+                            .font_weight(gpui::FontWeight::BOLD)
+                            .child(lives_text),
+                    )
+                    .child(div().text_sm().child(if self.game.muted {
+                        "SOUND OFF"
+                    } else {
+                        "SOUND ON"
+                    })),
             )
             .child(
                 div()
@@ -181,7 +237,9 @@ impl Render for GameApp {
                     .child(
                         canvas(
                             move |_, _, _| game_snapshot,
-                            move |bounds, snapshot, window, _| paint_game_scene(bounds, &snapshot, window),
+                            move |bounds, snapshot, window, _| {
+                                paint_game_scene(bounds, &snapshot, window)
+                            },
                         )
                         .size_full(),
                     ),
@@ -190,10 +248,9 @@ impl Render for GameApp {
             .child(language_controls)
             .child(game_controls)
             .child(
-                div()
-                    .text_xs()
-                    .text_color(rgb(0x94a3b8))
-                    .child("Controls: Arrow keys / WASD • SPACE start • P pause • R restart • M mute"),
+                div().text_xs().text_color(rgb(0x94a3b8)).child(
+                    "Controls: Arrow keys / WASD • SPACE start • P pause • R restart • M mute",
+                ),
             )
     }
 }
@@ -221,8 +278,16 @@ impl From<&Game> for GameSnapshot {
             animation_frame: game.player.animation_frame,
             score: game.player.score,
             lives: game.player.lives,
-            bombs: game.bombs.iter().map(|item| (item.x, item.y, item.width, item.height)).collect(),
-            collectibles: game.collectibles.iter().map(|item| (item.x, item.y, item.width, item.height, item.kind)).collect(),
+            bombs: game
+                .bombs
+                .iter()
+                .map(|item| (item.x, item.y, item.width, item.height))
+                .collect(),
+            collectibles: game
+                .collectibles
+                .iter()
+                .map(|item| (item.x, item.y, item.width, item.height, item.kind))
+                .collect(),
         }
     }
 }
@@ -230,7 +295,10 @@ impl From<&Game> for GameSnapshot {
 fn scaled_point(bounds: Bounds<Pixels>, x: f32, y: f32) -> Point<Pixels> {
     let scale_x = f32::from(bounds.size.width) / GAME_WIDTH;
     let scale_y = f32::from(bounds.size.height) / GAME_HEIGHT;
-    point(bounds.origin.x + px(x * scale_x), bounds.origin.y + px(y * scale_y))
+    point(
+        bounds.origin.x + px(x * scale_x),
+        bounds.origin.y + px(y * scale_y),
+    )
 }
 
 fn paint_rect(
@@ -245,10 +313,13 @@ fn paint_rect(
     let origin = scaled_point(bounds, x, y);
     let scale_x = f32::from(bounds.size.width) / GAME_WIDTH;
     let scale_y = f32::from(bounds.size.height) / GAME_HEIGHT;
-    window.paint_quad(PaintQuad::new(Bounds {
-        origin,
-        size: size(px(width * scale_x), px(height * scale_y)),
-    }).background(color));
+    window.paint_quad(
+        PaintQuad::new(Bounds {
+            origin,
+            size: size(px(width * scale_x), px(height * scale_y)),
+        })
+        .background(color),
+    );
 }
 
 fn paint_circle(
@@ -265,7 +336,10 @@ fn paint_circle(
     let mut path = PathBuilder::fill();
     for step in 0..24 {
         let angle = step as f32 * std::f32::consts::TAU / 24.0;
-        let point = point(center.x + px(angle.cos() * radius), center.y + px(angle.sin() * radius));
+        let point = point(
+            center.x + px(angle.cos() * radius),
+            center.y + px(angle.sin() * radius),
+        );
         if step == 0 {
             path.move_to(point);
         } else {
@@ -303,7 +377,15 @@ fn paint_diamond(
 }
 
 fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Window) {
-    paint_rect(bounds, window, 0.0, 0.0, GAME_WIDTH, GAME_HEIGHT, rgb(0x0b3550));
+    paint_rect(
+        bounds,
+        window,
+        0.0,
+        0.0,
+        GAME_WIDTH,
+        GAME_HEIGHT,
+        rgb(0x0b3550),
+    );
     paint_rect(bounds, window, 0.0, 0.0, GAME_WIDTH, 95.0, rgb(0x102b46));
     paint_rect(bounds, window, 0.0, 500.0, GAME_WIDTH, 100.0, rgb(0x0a263e));
 
@@ -318,7 +400,14 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
 
     for (x, y, width, height) in &game.bombs {
         paint_circle(bounds, window, *x, *y, *width, rgb(0x1f2937));
-        paint_circle(bounds, window, *x + width * 0.25, *y + height * 0.25, width * 0.22, rgb(0xef4444));
+        paint_circle(
+            bounds,
+            window,
+            *x + width * 0.25,
+            *y + height * 0.25,
+            width * 0.22,
+            rgb(0xef4444),
+        );
         let fuse = scaled_point(bounds, *x + width * 0.55, *y + height * 0.05);
         let fuse_end = scaled_point(bounds, *x + width * 0.78, *y - height * 0.1);
         let mut path = PathBuilder::stroke(px(2.0));
@@ -337,30 +426,127 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
             CollectibleKind::Batik4 => rgb(0x60a5fa),
         };
         paint_diamond(bounds, window, *x, *y, *width, *height, color);
-        paint_diamond(bounds, window, *x + width * 0.22, *y + height * 0.22, *width * 0.56, *height * 0.56, rgb(0x7c2d12));
+        paint_diamond(
+            bounds,
+            window,
+            *x + width * 0.22,
+            *y + height * 0.22,
+            *width * 0.56,
+            *height * 0.56,
+            rgb(0x7c2d12),
+        );
     }
 
     let player_color = match game.player_feedback {
-        PlayerFeedback::Normal => if game.animation_frame == 0 { rgb(0xf59e0b) } else { rgb(0xfbbf24) },
+        PlayerFeedback::Normal => {
+            if game.animation_frame == 0 {
+                rgb(0xf59e0b)
+            } else {
+                rgb(0xfbbf24)
+            }
+        }
         PlayerFeedback::Hit => rgb(0xef4444),
         PlayerFeedback::Collect => rgb(0x34d399),
     };
-    paint_circle(bounds, window, game.player_x + 20.0, game.player_y, 30.0, rgb(0xfde68a));
-    paint_rect(bounds, window, game.player_x + 10.0, game.player_y + 25.0, 50.0, 38.0, player_color);
-    paint_rect(bounds, window, game.player_x + 5.0, game.player_y + 35.0, 12.0, 28.0, rgb(0x7c3aed));
-    paint_rect(bounds, window, game.player_x + 48.0, game.player_y + 35.0, 12.0, 28.0, rgb(0x7c3aed));
-    paint_rect(bounds, window, game.player_x + 15.0, game.player_y + 58.0, 15.0, 12.0, rgb(0x172554));
-    paint_rect(bounds, window, game.player_x + 40.0, game.player_y + 58.0, 15.0, 12.0, rgb(0x172554));
-    paint_rect(bounds, window, game.player_x + 25.0, game.player_y + 30.0, 20.0, 5.0, rgb(0x7f1d1d));
+    paint_circle(
+        bounds,
+        window,
+        game.player_x + 20.0,
+        game.player_y,
+        30.0,
+        rgb(0xfde68a),
+    );
+    paint_rect(
+        bounds,
+        window,
+        game.player_x + 10.0,
+        game.player_y + 25.0,
+        50.0,
+        38.0,
+        player_color,
+    );
+    paint_rect(
+        bounds,
+        window,
+        game.player_x + 5.0,
+        game.player_y + 35.0,
+        12.0,
+        28.0,
+        rgb(0x7c3aed),
+    );
+    paint_rect(
+        bounds,
+        window,
+        game.player_x + 48.0,
+        game.player_y + 35.0,
+        12.0,
+        28.0,
+        rgb(0x7c3aed),
+    );
+    paint_rect(
+        bounds,
+        window,
+        game.player_x + 15.0,
+        game.player_y + 58.0,
+        15.0,
+        12.0,
+        rgb(0x172554),
+    );
+    paint_rect(
+        bounds,
+        window,
+        game.player_x + 40.0,
+        game.player_y + 58.0,
+        15.0,
+        12.0,
+        rgb(0x172554),
+    );
+    paint_rect(
+        bounds,
+        window,
+        game.player_x + 25.0,
+        game.player_y + 30.0,
+        20.0,
+        5.0,
+        rgb(0x7f1d1d),
+    );
 
     if game.state == GameState::Menu {
-        paint_rect(bounds, window, 0.0, 0.0, GAME_WIDTH, GAME_HEIGHT, rgb(0x0a1c2e));
+        paint_rect(
+            bounds,
+            window,
+            0.0,
+            0.0,
+            GAME_WIDTH,
+            GAME_HEIGHT,
+            rgb(0x0a1c2e),
+        );
         paint_rect(bounds, window, 80.0, 140.0, 640.0, 320.0, rgb(0x12344a));
         paint_rect(bounds, window, 110.0, 170.0, 580.0, 4.0, rgb(0xfbbf24));
         paint_rect(bounds, window, 110.0, 420.0, 580.0, 4.0, rgb(0xfbbf24));
     } else if game.state == GameState::Paused || game.state == GameState::GameOver {
-        paint_rect(bounds, window, 0.0, 0.0, GAME_WIDTH, GAME_HEIGHT, rgb(0x091827));
-        paint_rect(bounds, window, 130.0, 180.0, 540.0, 240.0, if game.state == GameState::Paused { rgb(0x1e3a5f) } else { rgb(0x7f1d1d) });
+        paint_rect(
+            bounds,
+            window,
+            0.0,
+            0.0,
+            GAME_WIDTH,
+            GAME_HEIGHT,
+            rgb(0x091827),
+        );
+        paint_rect(
+            bounds,
+            window,
+            130.0,
+            180.0,
+            540.0,
+            240.0,
+            if game.state == GameState::Paused {
+                rgb(0x1e3a5f)
+            } else {
+                rgb(0x7f1d1d)
+            },
+        );
     }
 
     // HUD is rendered as vector bars so it remains crisp at any scale.
@@ -368,6 +554,13 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
     paint_rect(bounds, window, 20.0, 20.0, 160.0, 8.0, rgb(0x1e293b));
     paint_rect(bounds, window, 20.0, 20.0, score_meter, 8.0, rgb(0xfbbf24));
     for life in 0..game.lives {
-        paint_circle(bounds, window, 730.0 - life as f32 * 24.0, 20.0, 16.0, rgb(0xef4444));
+        paint_circle(
+            bounds,
+            window,
+            730.0 - life as f32 * 24.0,
+            20.0,
+            16.0,
+            rgb(0xef4444),
+        );
     }
 }

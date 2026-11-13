@@ -270,17 +270,19 @@ impl Game {
         let dy = (self.keys.contains(&Direction::Up) as i32
             - self.keys.contains(&Direction::Down) as i32) as f32;
 
-        self.player.x = (self.player.x + dx * PLAYER_SPEED * dt)
-            .clamp(0.0, GAME_WIDTH - self.player.width);
-        self.player.y = (self.player.y + dy * PLAYER_SPEED * dt)
-            .clamp(0.0, GAME_HEIGHT - self.player.height);
+        self.player.x =
+            (self.player.x + dx * PLAYER_SPEED * dt).clamp(0.0, GAME_WIDTH - self.player.width);
+        self.player.y =
+            (self.player.y + dy * PLAYER_SPEED * dt).clamp(0.0, GAME_HEIGHT - self.player.height);
         self.player.update_feedback(dt);
 
         let player_bbox = self.player_bbox();
         let speed = BASE_GAME_SPEED * self.speed_multiplier * dt;
 
         self.bombs.iter_mut().for_each(|bomb| bomb.x -= speed);
-        self.collectibles.iter_mut().for_each(|item| item.x -= speed);
+        self.collectibles
+            .iter_mut()
+            .for_each(|item| item.x -= speed);
 
         let mut bomb_hits = 0_u8;
         self.bombs.retain(|bomb| {
@@ -336,8 +338,14 @@ mod tests {
 
     #[test]
     fn aabb_detects_overlap_and_edge_touch_is_not_overlap() {
-        assert!(Game::boxes_overlap((0.0, 10.0, 0.0, 10.0), (5.0, 15.0, 5.0, 15.0)));
-        assert!(!Game::boxes_overlap((0.0, 10.0, 0.0, 10.0), (10.0, 20.0, 0.0, 10.0)));
+        assert!(Game::boxes_overlap(
+            (0.0, 10.0, 0.0, 10.0),
+            (5.0, 15.0, 5.0, 15.0)
+        ));
+        assert!(!Game::boxes_overlap(
+            (0.0, 10.0, 0.0, 10.0),
+            (10.0, 20.0, 0.0, 10.0)
+        ));
     }
 
     #[test]
