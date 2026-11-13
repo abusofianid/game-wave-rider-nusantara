@@ -503,7 +503,14 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
             paint_sprite(bounds, window, *x, *y, *width, *height, &game.bomb_sprite);
         } else {
             paint_circle(bounds, window, *x, *y, *width, rgb(0x1f2937));
-            paint_circle(bounds, window, *x + width * 0.25, *y + height * 0.25, width * 0.22, rgb(0xef4444));
+            paint_circle(
+                bounds,
+                window,
+                *x + width * 0.25,
+                *y + height * 0.25,
+                width * 0.22,
+                rgb(0xef4444),
+            );
         }
     }
 
@@ -524,7 +531,15 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
                 CollectibleKind::Batik4 => rgb(0x60a5fa),
             };
             paint_diamond(bounds, window, *x, *y, *width, *height, color);
-            paint_diamond(bounds, window, *x + width * 0.22, *y + height * 0.22, *width * 0.56, *height * 0.56, rgb(0x7c2d12));
+            paint_diamond(
+                bounds,
+                window,
+                *x + width * 0.22,
+                *y + height * 0.22,
+                *width * 0.56,
+                *height * 0.56,
+                rgb(0x7c2d12),
+            );
         }
     }
 
@@ -550,7 +565,15 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
             player_sprite,
         );
     } else {
-        paint_rect(bounds, window, game.player_x, game.player_y, 70.0, 70.0, rgb(0xf59e0b));
+        paint_rect(
+            bounds,
+            window,
+            game.player_x,
+            game.player_y,
+            70.0,
+            70.0,
+            rgb(0xf59e0b),
+        );
     }
 
     if game.state == GameState::Menu {
