@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   native:
@@ -24,6 +24,7 @@ jobs:
           sudo apt-get install --yes \
             pkg-config \
             libfontconfig1-dev \
+            libasound2-dev \
             libx11-dev \
             libxkbcommon-dev \
             libxkbcommon-x11-dev \
