@@ -37,6 +37,7 @@ jobs:
             xauth \
             openbox \
             imagemagick \
+            xdotool \
             libvulkan1 \
             mesa-vulkan-drivers
       - name: Verify formatting
@@ -62,28 +63,40 @@ jobs:
               wait "$wm_pid" 2>/dev/null || true
             }
             trap cleanup EXIT
+            window_id=""
             for attempt in $(seq 1 30); do
-              if grep -q "image ready: .*assets/images/bg.png" /tmp/wave-rider-app.log; then
+              window_id=$(xdotool search --onlyvisible --pid "$app_pid" 2>/dev/null | head -n 1 || true)
+              if [ -n "$window_id" ] && grep -q "image ready: .*assets/images/bg.png" /tmp/wave-rider-app.log; then
                 break
               fi
               if ! kill -0 "$app_pid" 2>/dev/null; then
                 cat /tmp/wave-rider-app.log
-                echo "GPUI process exited before the background image loaded"
+                echo "GPUI process exited before its window and background image became ready"
                 exit 1
               fi
               sleep 1
             done
-            if ! kill -0 "$app_pid" 2>/dev/null; then
+            if [ -z "$window_id" ]; then
               cat /tmp/wave-rider-app.log
-              echo "GPUI process exited before the startup check completed"
+              echo "Could not find the GPUI application window by process ID"
               exit 1
             fi
-            import -window root artifacts/gpui-desktop-smoke.png
-            dimensions=$(identify -format "%wx%h" artifacts/gpui-desktop-smoke.png)
-            colors=$(identify -format "%k" artifacts/gpui-desktop-smoke.png)
-            echo "Captured virtual desktop: $dimensions; distinct colors: $colors"
-            test "$dimensions" = "1280x1024"
-            test "$colors" -gt 8
+            if ! grep -q "image ready: .*assets/images/bg.png" /tmp/wave-rider-app.log; then
+              cat /tmp/wave-rider-app.log
+              echo "The original background image did not finish loading within 30 seconds"
+              exit 1
+            fi
+            import -window "$window_id" artifacts/gpui-menu-smoke.png
+            xdotool windowactivate --sync "$window_id"
+            xdotool key --window "$window_id" space
+            sleep 2
+            import -window "$window_id" artifacts/gpui-gameplay-smoke.png
+            for screenshot in artifacts/gpui-menu-smoke.png artifacts/gpui-gameplay-smoke.png; do
+              dimensions=$(identify -format "%wx%h" "$screenshot")
+              colors=$(identify -format "%k" "$screenshot")
+              echo "Captured $screenshot: $dimensions; distinct colors: $colors"
+              test "$colors" -gt 8
+            done
             if ! grep -q "image ready: .*assets/images/bg.png" /tmp/wave-rider-app.log; then
               echo "The original background image did not finish loading within 30 seconds"
               cat /tmp/wave-rider-app.log
