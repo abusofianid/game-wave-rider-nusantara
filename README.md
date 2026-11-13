@@ -8,7 +8,8 @@
 **Wave Rider Nusantara** is an arcade-style game inspired by the culture and visual identity of the Indonesian archipelago. This repository contains multiple implementations of the game.
 
 >This project is featured in the following awesome lists:  
->✨ [awesome-open-source-games](https://github.com/michelpereira/awesome-open-source-games#arcade)
+>✨ [Awesome Open Source Games](https://github.com/michelpereira/awesome-open-source-games#arcade)  
+>✨ [Vibe Arcade](https://github.com/yldm-tech/awesome-vibe-games)
 
 ## Game versions
 
