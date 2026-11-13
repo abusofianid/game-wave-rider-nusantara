@@ -102,6 +102,7 @@ pub struct GameApp {
 impl GameApp {
     pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let focus_handle = cx.focus_handle().tab_stop(true);
+        window.set_window_title("Wave Rider Nusantara - Created by Abu Sofian");
         window.focus(&focus_handle, cx);
         let app = Self {
             game: Game::default(),
@@ -256,38 +257,43 @@ impl Render for GameApp {
             cx,
         );
 
-        let game_controls = div()
+        let mut game_controls = div()
             .absolute()
             .bottom(px(16.))
             .left(px(0.))
             .w_full()
             .flex()
             .justify_center()
-            .gap_2()
-            .child(Self::action_button(
-                "PAUSE  •  P",
+            .gap_2();
+
+        if self.game.state != GameState::GameOver {
+            game_controls = game_controls.child(Self::action_button(
+                if self.game.state == GameState::Paused { "RESUME  •  P" } else { "PAUSE  •  P" },
                 |this, cx| {
                     this.game.toggle_pause();
                     cx.notify();
                 },
                 cx,
-            ))
-            .child(Self::action_button(
+            ));
+        } else {
+            game_controls = game_controls.child(Self::action_button(
                 "RESTART  •  R",
                 |this, cx| {
                     this.game.restart();
                     cx.notify();
                 },
                 cx,
-            ))
-            .child(Self::action_button(
-                "SOUND  •  M",
-                |this, cx| {
-                    this.toggle_mute();
-                    cx.notify();
-                },
-                cx,
             ));
+        }
+
+        game_controls = game_controls.child(Self::action_button(
+            "SOUND  •  M",
+            |this, cx| {
+                this.toggle_mute();
+                cx.notify();
+            },
+            cx,
+        ));
 
         let mut scene = div()
             .relative()
@@ -350,6 +356,13 @@ impl Render for GameApp {
                                         .text_color(rgb(0x102a43))
                                         .child(title),
                                 )
+                                .child(
+                                    div()
+                                        .text_sm()
+                                        .font_family("Open Sans")
+                                        .text_color(rgb(0x24445c))
+                                        .child("Created by Abu Sofian"),
+                                )
                                 .child(div().text_sm().text_color(rgb(0x24445c)).child(subtitle))
                                 .child(div().text_sm().text_color(rgb(0x24445c)).child(
                                     match self.game.language {
@@ -389,9 +402,9 @@ impl Render for GameApp {
                         .justify_center()
                         .child(div().text_xs().text_color(rgb(0x102a43)).child(
                             match self.game.language {
-                                Language::English => "ARROW KEYS / WASD to move  •  SPACE to start",
+                                Language::English => "Press SPACE to start • ARROW KEYS / WASD to move • P to pause",
                                 Language::Indonesian => {
-                                    "TOMBOL PANAH / WASD untuk bergerak  •  SPASI untuk mulai"
+                                    "Tekan SPASI untuk mulai • TOMBOL PANAH / WASD untuk bergerak • P untuk jeda"
                                 }
                             },
                         )),
@@ -489,6 +502,7 @@ impl Render for GameApp {
             .size_full()
             .bg(rgb(0x071a2e))
             .text_color(rgb(0xf8fafc))
+            .font_family("Open Sans")
             .on_key_down(cx.listener(Self::handle_key_down))
             .on_key_up(cx.listener(Self::handle_key_up))
             .child(scene)
