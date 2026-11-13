@@ -3,7 +3,10 @@ mod game;
 
 use std::borrow::Cow;
 
-use gpui::{App, AppContext, AssetSource, SharedString, WindowOptions};
+use gpui::{
+    App, AppContext, AssetSource, Bounds, SharedString, WindowBounds, WindowOptions, point, px,
+    size,
+};
 use gpui_platform::application;
 
 use app::GameApp;
@@ -91,7 +94,18 @@ fn main() {
             )))])
             .expect("failed to register Open Sans font");
 
-        cx.open_window(WindowOptions::default(), |window, cx| {
+        // Match the Python/Pyglet game canvas exactly: 800 × 600 logical pixels.
+        // A fixed-size window prevents maximize and manual resizing from distorting the game.
+        let window_options = WindowOptions {
+            window_bounds: Some(WindowBounds::Windowed(Bounds {
+                origin: point(px(100.), px(100.)),
+                size: size(px(800.), px(600.)),
+            })),
+            is_resizable: false,
+            ..WindowOptions::default()
+        };
+
+        cx.open_window(window_options, |window, cx| {
             cx.new(|cx| GameApp::new(window, cx))
         })
         .expect("failed to open Wave Rider Nusantara desktop window");
