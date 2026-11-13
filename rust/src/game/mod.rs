@@ -482,7 +482,10 @@ mod tests {
             kind: CollectibleKind::Batik3,
         });
         game.tick(0.016);
-        assert_eq!(game.player.score, 10, "collecting Batik should add 10 points");
+        assert_eq!(
+            game.player.score, 10,
+            "collecting Batik should add 10 points"
+        );
         assert!(game.collectibles.is_empty());
 
         game.bombs.push(Entity {
