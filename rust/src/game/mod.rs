@@ -394,11 +394,119 @@ mod tests {
     fn movement_clamps_to_window_bounds() {
         let mut game = Game::default();
         game.state = GameState::Playing;
+        game.player.x = 1.0;
+        game.player.y = 1.0;
         game.set_key(Direction::Left, true);
+        game.set_key(Direction::Up, true);
+        game.tick(0.05);
+        assert_eq!(game.player.x, 0.0);
+        assert_eq!(game.player.y, 0.0);
+
+        game.set_key(Direction::Left, false);
+        game.set_key(Direction::Up, false);
+        game.player.x = GAME_WIDTH - game.player.width - 1.0;
+        game.player.y = GAME_HEIGHT - game.player.height - 1.0;
+        game.set_key(Direction::Right, true);
         game.set_key(Direction::Down, true);
         game.tick(0.05);
-        assert_eq!(game.player.x, 85.0);
-        assert_eq!(game.player.y, 285.0);
+        assert_eq!(game.player.x, GAME_WIDTH - game.player.width);
+        assert_eq!(game.player.y, GAME_HEIGHT - game.player.height);
+    }
+
+    #[test]
+    fn pause_freezes_gameplay_and_resume_continues_it() {
+        let mut game = Game::default();
+        game.start();
+        game.set_key(Direction::Right, true);
+        game.tick(0.05);
+        game.set_key(Direction::Right, false);
+        let player_x = game.player.x;
+        let speed = game.speed_multiplier;
+
+        game.toggle_pause();
+        assert_eq!(game.state, GameState::Paused);
+        game.set_key(Direction::Right, true);
+        game.tick(0.05);
+        assert_eq!(game.player.x, player_x);
+        assert_eq!(game.speed_multiplier, speed);
+
+        game.toggle_pause();
+        assert_eq!(game.state, GameState::Playing);
+        game.tick(0.05);
+        assert!(game.player.x > player_x);
+    }
+
+    #[test]
+    fn gameplay_loop_spawns_bombs_and_batik_collectibles() {
+        let mut game = Game::default();
+        game.start();
+
+        for _ in 0..120 {
+            game.tick(0.05);
+        }
+
+        assert!(!game.bombs.is_empty(), "bombs should spawn during gameplay");
+        assert!(
+            !game.collectibles.is_empty(),
+            "Batik collectibles should spawn during gameplay"
+        );
+    }
+
+    #[test]
+    fn full_gameplay_scenario_covers_start_movement_collection_damage_and_game_over() {
+        let mut game = Game::default();
+        assert_eq!(game.state, GameState::Menu);
+
+        game.start();
+        assert_eq!(game.state, GameState::Playing);
+
+        let start_x = game.player.x;
+        game.set_key(Direction::Right, true);
+        game.tick(0.05);
+        game.set_key(Direction::Right, false);
+        assert!(game.player.x > start_x, "Gatotkaca should move right");
+
+        for _ in 0..120 {
+            game.tick(0.05);
+        }
+        assert!(!game.bombs.is_empty(), "bombs should appear");
+        assert!(!game.collectibles.is_empty(), "Batik should appear");
+
+        game.bombs.clear();
+        game.collectibles.clear();
+        game.collectibles.push(Entity {
+            x: game.player.x + 5.0,
+            y: game.player.y + 5.0,
+            width: 30.0,
+            height: 30.0,
+            kind: CollectibleKind::Batik3,
+        });
+        game.tick(0.016);
+        assert_eq!(game.player.score, 10, "collecting Batik should add 10 points");
+        assert!(game.collectibles.is_empty());
+
+        game.bombs.push(Entity {
+            x: game.player.x + 5.0,
+            y: game.player.y + 5.0,
+            width: 30.0,
+            height: 30.0,
+            kind: CollectibleKind::Batik1,
+        });
+        game.tick(0.016);
+        assert_eq!(game.player.lives, 2, "one bomb hit should remove one life");
+
+        for _ in 0..2 {
+            game.bombs.push(Entity {
+                x: game.player.x + 5.0,
+                y: game.player.y + 5.0,
+                width: 30.0,
+                height: 30.0,
+                kind: CollectibleKind::Batik1,
+            });
+        }
+        game.tick(0.016);
+        assert_eq!(game.player.lives, 0);
+        assert_eq!(game.state, GameState::GameOver);
     }
 
     #[test]
