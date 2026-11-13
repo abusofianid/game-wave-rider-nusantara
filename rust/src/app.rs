@@ -812,5 +812,4 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
             },
         );
     }
-
 }
