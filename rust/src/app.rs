@@ -475,18 +475,36 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
         GAME_HEIGHT,
         rgb(0x0b3550),
     );
-    paint_sprite(
-        bounds,
-        window,
-        0.0,
-        0.0,
-        GAME_WIDTH,
-        GAME_HEIGHT,
-        &game.background,
-    );
+    if game.background.is_some() {
+        paint_sprite(
+            bounds,
+            window,
+            0.0,
+            0.0,
+            GAME_WIDTH,
+            GAME_HEIGHT,
+            &game.background,
+        );
+    } else {
+        paint_rect(bounds, window, 0.0, 0.0, GAME_WIDTH, 95.0, rgb(0x102b46));
+        paint_rect(bounds, window, 0.0, 500.0, GAME_WIDTH, 100.0, rgb(0x0a263e));
+        for index in 0..8 {
+            let x = index as f32 * 120.0 - 30.0;
+            paint_rect(bounds, window, x, 100.0, 2.0, 400.0, rgb(0x164a63));
+        }
+        for index in 0..7 {
+            let y = 130.0 + index as f32 * 60.0;
+            paint_rect(bounds, window, 0.0, y, GAME_WIDTH, 1.0, rgb(0x164a63));
+        }
+    }
 
     for (x, y, width, height) in &game.bombs {
-        paint_sprite(bounds, window, *x, *y, *width, *height, &game.bomb_sprite);
+        if game.bomb_sprite.is_some() {
+            paint_sprite(bounds, window, *x, *y, *width, *height, &game.bomb_sprite);
+        } else {
+            paint_circle(bounds, window, *x, *y, *width, rgb(0x1f2937));
+            paint_circle(bounds, window, *x + width * 0.25, *y + height * 0.25, width * 0.22, rgb(0xef4444));
+        }
     }
 
     for (x, y, width, height, kind) in &game.collectibles {
@@ -496,7 +514,18 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
             CollectibleKind::Batik3 => &game.batik_3,
             CollectibleKind::Batik4 => &game.batik_4,
         };
-        paint_sprite(bounds, window, *x, *y, *width, *height, sprite);
+        if sprite.is_some() {
+            paint_sprite(bounds, window, *x, *y, *width, *height, sprite);
+        } else {
+            let color = match kind {
+                CollectibleKind::Batik1 => rgb(0xfbbf24),
+                CollectibleKind::Batik2 => rgb(0x34d399),
+                CollectibleKind::Batik3 => rgb(0xf472b6),
+                CollectibleKind::Batik4 => rgb(0x60a5fa),
+            };
+            paint_diamond(bounds, window, *x, *y, *width, *height, color);
+            paint_diamond(bounds, window, *x + width * 0.22, *y + height * 0.22, *width * 0.56, *height * 0.56, rgb(0x7c2d12));
+        }
     }
 
     let player_sprite = match game.player_feedback {
@@ -510,15 +539,19 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
         PlayerFeedback::Hit => &game.gatot_hit,
         PlayerFeedback::Collect => &game.gatot_collect,
     };
-    paint_sprite(
-        bounds,
-        window,
-        game.player_x,
-        game.player_y,
-        70.0,
-        70.0,
-        player_sprite,
-    );
+    if player_sprite.is_some() {
+        paint_sprite(
+            bounds,
+            window,
+            game.player_x,
+            game.player_y,
+            70.0,
+            70.0,
+            player_sprite,
+        );
+    } else {
+        paint_rect(bounds, window, game.player_x, game.player_y, 70.0, 70.0, rgb(0xf59e0b));
+    }
 
     if game.state == GameState::Menu {
         paint_rect(
