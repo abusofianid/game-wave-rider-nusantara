@@ -1,72 +1,51 @@
-# Wave Rider Nusantara — Rust
+# Wave Rider Nusantara — Native GPUI Desktop
 
-The Rust implementation complements the React web game and Python version. It uses [Macroquad](https://macroquad.rs/) for gameplay and can run as a desktop application or compile to WebAssembly for browsers.
+A native Rust desktop rebuild of the Python/Pyglet edition of Wave Rider Nusantara. The gameplay model is ported from `python/main.py`; GPUI provides the native application window, keyboard input, and GPU-backed custom scene painting.
 
-## Features
+## Stack
 
-- Gatotkaca idle, hit, and collect animations.
-- Four batik collectibles, bombs, collision detection, scoring, and three lives.
-- Main menu, pause/resume, game-over, and restart flows.
-- English and Indonesian in-game UI.
-- Keyboard and mouse input, with on-screen movement controls on narrow screens.
-- Looping background music with a mute toggle; music is paused when gameplay is paused or reset.
-- Reuses optimized WebP backgrounds, character sprites, bombs, and collectible artwork.
-- Delta-time movement and frame-rate-scaled spawning.
+- Rust (Edition 2024)
+- GPUI (GPUI Unofficial distribution)
+- Native desktop application (Linux, macOS, Windows supported by GPUI platform layer)
 
-## Requirements
+## Run locally
 
-- Stable Rust toolchain and Cargo.
-- For WebAssembly builds: the `wasm32-unknown-unknown` target (the build script installs it).
-- Python 3, only if you want to serve the generated WebAssembly build locally.
-- FFmpeg is only needed to regenerate the soundtrack from a WebM source; the committed OGG file is used by default.
+Install a stable Rust toolchain and the native platform dependencies required by GPUI. From this directory:
 
-## Run as a desktop application
-
-From this directory:
-
-```bash
-cargo run --release
+```sh
+cargo run
 ```
 
-The game loads its assets from the `assets/` directory. The background soundtrack is `assets/audio/bg-sound.ogg`.
+Run gameplay model tests and check the code:
 
-## Build and run WebAssembly locally
-
-From this directory:
-
-```bash
-./scripts/build-wasm.sh
-python3 -m http.server 8000
+```sh
+cargo fmt --all -- --check
+cargo check
+cargo test
+cargo build --release
 ```
 
-Open [http://localhost:8000/web/](http://localhost:8000/web/). Serve the files over HTTP rather than opening the HTML file directly. The build script generates `web/index.html`, the WebAssembly binary, the Macroquad JavaScript bundle, and the required assets.
+## Gameplay port
 
-The script copies the committed `assets/audio/bg-sound.ogg` into `web/assets/audio/`. It does not need a WebM source file when the OGG asset is already present.
+- Menu, playing, paused, and game-over state flow.
+- Gatotkaca player movement with arrow keys or WASD and window-bound clamping.
+- Continuous side-scrolling entities, dynamic bomb and batik spawn, and increasing game speed.
+- AABB collision checks and spawn-overlap prevention.
+- Bomb collision reduces three lives; game-over is reached at zero lives.
+- Batik collection adds 10 points.
+- Temporary hit/collect feedback and a two-frame run-state animation counter.
+- English and Indonesian UI language choice.
+- Space starts, P pauses/resumes, R restarts after game-over, M toggles the mute preference.
+- GPUI canvas scene painted with vector primitives.
 
-## WebAssembly on Vercel
+## Current port scope
 
-The intended Vercel build configuration for this Rust project uses `rust/` as the project root, runs `bash scripts/build-wasm.sh`, and publishes the generated `web/` directory. Confirm the Vercel project settings and latest deployment status before relying on a hosted build; a successful local build does not by itself confirm a successful deployment.
+The core game model and scene loop are newly implemented from the Python source. The current rendering uses vector-drawn approximations rather than the original PNG sprites. The Python source assets remain in the sibling `python/assets/` directory and are not yet wired into the GPUI renderer. The mute toggle is UI state only; background audio playback has not yet been ported. These are remaining polish tasks for visual/audio parity.
 
-## Controls
+## CI
 
-- **Arrow keys or WASD:** move.
-- **Space:** start.
-- **P:** pause or resume.
-- **M:** mute or unmute.
-- **R:** return to the menu after game over.
-- **Mouse or touch:** use the on-screen controls where available.
+GitHub Actions runs formatting checks, `cargo check`, gameplay tests, and an optimized native release build on Linux.
 
-## Assets and audio
-
-- Game artwork is stored as WebP in `assets/images/`.
-- The committed background soundtrack is `assets/audio/bg-sound.ogg`, encoded with OGG Vorbis.
-- The former `bg-sound.webm` source file has been removed from the repository. The WebAssembly build uses the committed OGG file directly.
-- `scripts/prepare-audio.sh` keeps an existing OGG file and only attempts conversion when the OGG is missing and a WebM source is available. Regenerating the OGG requires FFmpeg or Node.js/npm to obtain `ffmpeg-static`.
-
-## Validation
-
-The repository's GitHub Actions workflows can validate Rust targets and tests and build a static WebAssembly artifact. Check the [Actions page](https://github.com/abusofianid/game-wave-rider-nusantara/actions) for the latest run results. Deployment status is separate from CI results.
-
-## License and attribution
+## License
 
 The repository contains MIT and Apache-2.0 license files at its root. Review those files and any third-party asset attribution requirements before redistributing source code or builds.
