@@ -170,10 +170,10 @@ impl GameApp {
             .px_4()
             .py_2()
             .rounded_lg()
-            .bg(rgb(0x1e3a8a))
-            .text_color(rgb(0xffffff))
+            .bg(rgba(0xf8fcffdd))
+            .text_color(rgb(0x102a43))
             .cursor_pointer()
-            .hover(|style| style.bg(rgb(0x2563eb)))
+            .hover(|style| style.bg(rgb(0xffffffff)))
             .child(label)
             .on_click(cx.listener(move |this, _, _, cx| action(this, cx)))
     }
@@ -195,8 +195,8 @@ impl Render for GameApp {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let game_snapshot = GameSnapshot::from(&self.game);
         let title = match self.game.language {
-            Language::English => "WAVE RIDER NUSANTARA",
-            Language::Indonesian => "PENUNGGANG GELOMBANG NUSANTARA",
+            Language::English => "Wave Rider Nusantara",
+            Language::Indonesian => "Penunggang Gelombang Nusantara",
         };
         let subtitle = match self.game.language {
             Language::English => "Help Gatotkaca collect Batik patterns and avoid bombs",
@@ -212,22 +212,18 @@ impl Render for GameApp {
         };
         let state_text = match (self.game.language, self.game.state) {
             (Language::English, GameState::Menu) => "Choose a language, then press SPACE to start",
-            (Language::Indonesian, GameState::Menu) => "Pilih bahasa, lalu tekan SPASI untuk mulai",
+            (Language::Indonesian, GameState::Menu) => "Silakan pilih bahasa, lalu tekan SPASI untuk mulai",
             (Language::English, GameState::Playing) => "PLAYING • P to pause • M to mute",
-            (Language::Indonesian, GameState::Playing) => {
-                "BERMAIN • P untuk jeda • M untuk bisukan"
-            }
+            (Language::Indonesian, GameState::Playing) => "BERMAIN • P untuk jeda • M untuk bisukan",
             (Language::English, GameState::Paused) => "PAUSED • Press P to resume",
             (Language::Indonesian, GameState::Paused) => "JEDA • Tekan P untuk melanjutkan",
             (Language::English, GameState::GameOver) => "GAME OVER • Press R to restart",
-            (Language::Indonesian, GameState::GameOver) => {
-                "PERMAINAN BERAKHIR • Tekan R untuk ulang"
-            }
+            (Language::Indonesian, GameState::GameOver) => "PERMAINAN BERAKHIR • Tekan R untuk ulang",
         };
 
         let language_controls = div()
             .flex()
-            .gap_2()
+            .gap_3()
             .child(Self::action_button(
                 "English",
                 |this, cx| this.choose_language(Language::English, cx),
@@ -239,19 +235,25 @@ impl Render for GameApp {
                 cx,
             ));
 
+        let menu_start = Self::action_button(
+            "START  •  SPACE",
+            |this, cx| {
+                this.game.start_from_control();
+                cx.notify();
+            },
+            cx,
+        );
+
         let game_controls = div()
+            .absolute()
+            .bottom(px(16.))
+            .left(px(0.))
+            .w_full()
             .flex()
+            .justify_center()
             .gap_2()
             .child(Self::action_button(
-                "START / SPACE",
-                |this, cx| {
-                    this.game.start_from_control();
-                    cx.notify();
-                },
-                cx,
-            ))
-            .child(Self::action_button(
-                "PAUSE / P",
+                "PAUSE  •  P",
                 |this, cx| {
                     this.game.toggle_pause();
                     cx.notify();
@@ -259,7 +261,7 @@ impl Render for GameApp {
                 cx,
             ))
             .child(Self::action_button(
-                "RESTART / R",
+                "RESTART  •  R",
                 |this, cx| {
                     this.game.restart();
                     cx.notify();
@@ -267,7 +269,7 @@ impl Render for GameApp {
                 cx,
             ))
             .child(Self::action_button(
-                "SOUND / M",
+                "SOUND  •  M",
                 |this, cx| {
                     this.toggle_mute();
                     cx.notify();
@@ -275,90 +277,191 @@ impl Render for GameApp {
                 cx,
             ));
 
+        let mut scene = div()
+            .relative()
+            .w_full()
+            .max_w(px(800.))
+            .h(px(600.))
+            .rounded_xl()
+            .overflow_hidden()
+            .child(
+                canvas(
+                    move |_, window, cx| {
+                        let mut snapshot = game_snapshot.clone();
+                        snapshot.background = load_sprite(BACKGROUND, window, cx);
+                        snapshot.gatot_1 = load_sprite(GATOT_1, window, cx);
+                        snapshot.gatot_2 = load_sprite(GATOT_2, window, cx);
+                        snapshot.gatot_collect = load_sprite(GATOT_COLLECT, window, cx);
+                        snapshot.gatot_hit = load_sprite(GATOT_HIT, window, cx);
+                        snapshot.bomb_sprite = load_sprite(BOMB, window, cx);
+                        snapshot.batik_1 = load_sprite(BATIK_1, window, cx);
+                        snapshot.batik_2 = load_sprite(BATIK_2, window, cx);
+                        snapshot.batik_3 = load_sprite(BATIK_3, window, cx);
+                        snapshot.batik_4 = load_sprite(BATIK_4, window, cx);
+                        snapshot
+                    },
+                    move |bounds, snapshot, window, _| {
+                        paint_game_scene(bounds, &snapshot, window)
+                    },
+                )
+                .size_full(),
+            );
+
+        if self.game.state == GameState::Menu {
+            scene = scene
+                .child(
+                    div()
+                        .absolute()
+                        .top(px(112.))
+                        .left(px(80.))
+                        .w(px(640.))
+                        .h(px(376.))
+                        .rounded_xl()
+                        .bg(rgba(0xeaf8ffdd))
+                        .flex()
+                        .flex_col()
+                        .items_center()
+                        .justify_center()
+                        .gap_4()
+                        .px_8()
+                        .child(
+                            div()
+                                .text_2xl()
+                                .font_weight(gpui::FontWeight::BOLD)
+                                .text_color(rgb(0x102a43))
+                                .child(title),
+                        )
+                        .child(
+                            div()
+                                .text_sm()
+                                .text_color(rgb(0x24445c))
+                                .child(subtitle),
+                        )
+                        .child(
+                            div()
+                                .text_sm()
+                                .text_color(rgb(0x24445c))
+                                .child(match self.game.language {
+                                    Language::English => "Please select a language",
+                                    Language::Indonesian => "Silakan pilih bahasa",
+                                }),
+                        )
+                        .child(language_controls)
+                        .child(menu_start),
+                )
+                .child(
+                    div()
+                        .absolute()
+                        .top(px(14.))
+                        .right(px(14.))
+                        .child(Self::action_button(
+                            if self.game.muted { "SOUND OFF" } else { "SOUND ON" },
+                            |this, cx| {
+                                this.toggle_mute();
+                                cx.notify();
+                            },
+                            cx,
+                        )),
+                )
+                .child(
+                    div()
+                        .absolute()
+                        .bottom(px(18.))
+                        .left(px(0.))
+                        .w_full()
+                        .flex()
+                        .justify_center()
+                        .child(
+                            div()
+                                .text_xs()
+                                .text_color(rgb(0x102a43))
+                                .child(match self.game.language {
+                                    Language::English => "ARROW KEYS / WASD to move  •  SPACE to start",
+                                    Language::Indonesian => "TOMBOL PANAH / WASD untuk bergerak  •  SPASI untuk mulai",
+                                }),
+                        ),
+                );
+        } else {
+            scene = scene
+                .child(
+                    div()
+                        .absolute()
+                        .top(px(16.))
+                        .left(px(18.))
+                        .flex()
+                        .gap_6()
+                        .child(
+                            div()
+                                .px_3()
+                                .py_2()
+                                .rounded_lg()
+                                .bg(rgba(0xeaf8ffdd))
+                                .text_color(rgb(0x102a43))
+                                .font_weight(gpui::FontWeight::BOLD)
+                                .child(score_text),
+                        )
+                        .child(
+                            div()
+                                .px_3()
+                                .py_2()
+                                .rounded_lg()
+                                .bg(rgba(0xeaf8ffdd))
+                                .text_color(rgb(0x102a43))
+                                .font_weight(gpui::FontWeight::BOLD)
+                                .child(lives_text),
+                        ),
+                )
+                .child(
+                    div()
+                        .absolute()
+                        .top(px(16.))
+                        .right(px(16.))
+                        .child(Self::action_button(
+                            if self.game.muted { "SOUND OFF" } else { "SOUND ON" },
+                            |this, cx| {
+                                this.toggle_mute();
+                                cx.notify();
+                            },
+                            cx,
+                        )),
+                )
+                .child(game_controls);
+
+            if self.game.state == GameState::Paused || self.game.state == GameState::GameOver {
+                scene = scene.child(
+                    div()
+                        .absolute()
+                        .top(px(205.))
+                        .left(px(130.))
+                        .w(px(540.))
+                        .h(px(190.))
+                        .rounded_xl()
+                        .bg(rgba(0xeaf8ffed))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .text_color(rgb(0x102a43))
+                        .text_xl()
+                        .font_weight(gpui::FontWeight::BOLD)
+                        .child(state_text),
+                );
+            }
+        }
+
         div()
             .id("wave-rider-root")
             .track_focus(&self.focus_handle)
             .flex()
             .flex_col()
             .items_center()
-            .gap_3()
+            .justify_center()
             .p_4()
             .size_full()
             .bg(rgb(0x071a2e))
             .text_color(rgb(0xf8fafc))
             .on_key_down(cx.listener(Self::handle_key_down))
             .on_key_up(cx.listener(Self::handle_key_up))
-            .child(
-                div()
-                    .text_xl()
-                    .font_weight(gpui::FontWeight::BOLD)
-                    .child(title),
-            )
-            .child(div().text_sm().text_color(rgb(0xb6d9ed)).child(subtitle))
-            .child(
-                div()
-                    .flex()
-                    .justify_between()
-                    .w_full()
-                    .max_w(px(800.))
-                    .child(
-                        div()
-                            .text_sm()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child(score_text),
-                    )
-                    .child(
-                        div()
-                            .text_sm()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child(lives_text),
-                    )
-                    .child(div().text_sm().child(if self.audio.is_none() {
-                        "SOUND UNAVAILABLE"
-                    } else if self.game.muted {
-                        "SOUND OFF"
-                    } else {
-                        "SOUND ON"
-                    })),
-            )
-            .child(
-                div()
-                    .w_full()
-                    .max_w(px(800.))
-                    .h(px(600.))
-                    .rounded_xl()
-                    .overflow_hidden()
-                    .child(
-                        canvas(
-                            move |_, window, cx| {
-                                let mut snapshot = game_snapshot.clone();
-                                snapshot.background = load_sprite(BACKGROUND, window, cx);
-                                snapshot.gatot_1 = load_sprite(GATOT_1, window, cx);
-                                snapshot.gatot_2 = load_sprite(GATOT_2, window, cx);
-                                snapshot.gatot_collect = load_sprite(GATOT_COLLECT, window, cx);
-                                snapshot.gatot_hit = load_sprite(GATOT_HIT, window, cx);
-                                snapshot.bomb_sprite = load_sprite(BOMB, window, cx);
-                                snapshot.batik_1 = load_sprite(BATIK_1, window, cx);
-                                snapshot.batik_2 = load_sprite(BATIK_2, window, cx);
-                                snapshot.batik_3 = load_sprite(BATIK_3, window, cx);
-                                snapshot.batik_4 = load_sprite(BATIK_4, window, cx);
-                                snapshot
-                            },
-                            move |bounds, snapshot, window, _| {
-                                paint_game_scene(bounds, &snapshot, window)
-                            },
-                        )
-                        .size_full(),
-                    ),
-            )
-            .child(div().text_sm().text_color(rgb(0xfde68a)).child(state_text))
-            .child(language_controls)
-            .child(game_controls)
-            .child(
-                div().text_xs().text_color(rgb(0x94a3b8)).child(
-                    "Controls: Arrow keys / WASD • SPACE start • P pause • R restart • M mute",
-                ),
-            )
+            .child(scene)
     }
 }
 
@@ -642,14 +745,7 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
         );
     }
 
-    if game.state == GameState::Menu {
-        // Keep the original scene visible behind a translucent glass-like menu.
-        // The previous opaque full-screen overlay hid the background image entirely.
-        paint_rect(bounds, window, 80.0, 112.0, 640.0, 376.0, rgba(0xeaf8ffcc));
-        // Subtle inner highlight and lower edge recreate the soft glass-panel frame.
-        paint_rect(bounds, window, 82.0, 114.0, 636.0, 2.0, rgba(0xffffffff));
-        paint_rect(bounds, window, 82.0, 484.0, 636.0, 2.0, rgba(0xb9e7f4cc));
-    } else if game.state == GameState::Paused || game.state == GameState::GameOver {
+    if game.state == GameState::Paused || game.state == GameState::GameOver {
         paint_rect(
             bounds,
             window,
