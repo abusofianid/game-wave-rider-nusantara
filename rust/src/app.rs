@@ -88,6 +88,7 @@ impl GameApp {
         cx: &Context<Self>,
     ) -> impl IntoElement {
         div()
+            .id(label)
             .px_4()
             .py_2()
             .rounded_lg()
