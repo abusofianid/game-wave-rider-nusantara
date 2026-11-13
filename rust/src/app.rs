@@ -1,7 +1,6 @@
 use std::{
     collections::HashSet,
     io::Cursor,
-    path::PathBuf,
     sync::{Arc, Mutex, OnceLock},
     time::Duration,
 };
@@ -10,7 +9,7 @@ use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink, Player};
 
 use async_io::Timer;
 use gpui::{
-    App, Bounds, Context, Corners, FocusHandle, ImgResourceLoader, InteractiveElement,
+    App, Bounds, Context, Corners, FocusHandle, ImageAssetLoader, InteractiveElement,
     KeyDownEvent, KeyUpEvent, PathBuilder, Pixels, Point, Render, RenderImage, Resource,
     StatefulInteractiveElement, Window, canvas, div, fill, point, prelude::*, px, rgb, rgba, size,
 };
@@ -75,8 +74,8 @@ impl AudioController {
 fn load_sprite(path: &str, window: &mut Window, cx: &mut App) -> Option<Arc<RenderImage>> {
     static READY_ASSETS: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
 
-    let resource: Resource = PathBuf::from(path).into();
-    match window.use_asset::<ImgResourceLoader>(&resource, cx) {
+    let resource = Resource::Embedded(path.into());
+    match window.use_asset::<ImageAssetLoader>(&resource, cx) {
         Some(Ok(image)) => {
             let ready_assets = READY_ASSETS.get_or_init(|| Mutex::new(HashSet::new()));
             if let Ok(mut ready_assets) = ready_assets.lock()
