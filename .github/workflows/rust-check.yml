@@ -33,6 +33,12 @@ jobs:
             libxcb-render0-dev \
             libxcb-shape0-dev \
             libxcb-xfixes0-dev
+            xvfb \
+            xauth \
+            openbox \
+            imagemagick \
+            libvulkan1 \
+            mesa-vulkan-drivers
       - name: Verify formatting
         run: cargo fmt --manifest-path rust/Cargo.toml --all -- --check
       - name: Check native application
@@ -41,3 +47,42 @@ jobs:
         run: cargo test --manifest-path rust/Cargo.toml
       - name: Build release desktop app
         run: cargo build --manifest-path rust/Cargo.toml --release
+      - name: Smoke test GPUI startup and capture screenshot
+        run: |
+          mkdir -p artifacts
+          xvfb-run -a bash -euo pipefail -c '
+            export LIBGL_ALWAYS_SOFTWARE=1
+            openbox >/tmp/wave-rider-openbox.log 2>&1 &
+            wm_pid=$!
+            ./rust/target/release/wave-rider-nusantara >/tmp/wave-rider-app.log 2>&1 &
+            app_pid=$!
+            cleanup() {
+              kill "$app_pid" "$wm_pid" 2>/dev/null || true
+              wait "$app_pid" 2>/dev/null || true
+              wait "$wm_pid" 2>/dev/null || true
+            }
+            trap cleanup EXIT
+            sleep 8
+            if ! kill -0 "$app_pid" 2>/dev/null; then
+              cat /tmp/wave-rider-app.log
+              echo "GPUI process exited before the startup check completed"
+              exit 1
+            fi
+            import -window root artifacts/gpui-desktop-smoke.png
+            dimensions=$(identify -format "%wx%h" artifacts/gpui-desktop-smoke.png)
+            colors=$(identify -format "%k" artifacts/gpui-desktop-smoke.png)
+            echo "Captured virtual desktop: $dimensions; distinct colors: $colors"
+            test "$dimensions" = "1280x1024"
+            test "$colors" -gt 8
+          '
+      - name: Upload GPUI smoke-test screenshot and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpui-desktop-smoke
+          path: |
+            artifacts/gpui-desktop-smoke.png
+            /tmp/wave-rider-app.log
+            /tmp/wave-rider-openbox.log
+          if-no-files-found: warn
+          retention-days: 7
