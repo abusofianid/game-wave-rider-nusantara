@@ -854,11 +854,11 @@ mod audio_tests {
         let decoder = Decoder::new(Cursor::new(BACKGROUND_MUSIC))
             .expect("bundled OGG soundtrack must decode");
         assert!(
-            decoder.channels() > 0,
+            decoder.channels().get() > 0,
             "soundtrack must have audio channels"
         );
         assert!(
-            decoder.sample_rate() > 0,
+            decoder.sample_rate().get() > 0,
             "soundtrack must have a sample rate"
         );
         assert!(
