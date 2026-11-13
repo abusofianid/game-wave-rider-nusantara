@@ -106,15 +106,6 @@ pub struct Entity {
     pub kind: CollectibleKind,
 }
 
-impl Entity {
-    fn overlaps(&self, player: &Player) -> bool {
-        player.x < self.x + self.width
-            && player.x + player.width > self.x
-            && player.y < self.y + self.height
-            && player.y + player.height > self.y
-    }
-}
-
 #[derive(Debug)]
 pub struct Game {
     pub state: GameState,
