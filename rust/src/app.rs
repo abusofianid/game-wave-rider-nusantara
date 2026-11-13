@@ -30,7 +30,10 @@ const BATIK_1: &str = "assets/images/collect_1.png";
 const BATIK_2: &str = "assets/images/collect_2.png";
 const BATIK_3: &str = "assets/images/collect_3.png";
 const BATIK_4: &str = "assets/images/collect_4.png";
-const BACKGROUND_MUSIC: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/audio/bg-sound.ogg"));
+const BACKGROUND_MUSIC: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/assets/audio/bg-sound.ogg"
+));
 
 struct AudioController {
     _output: MixerDeviceSink,
