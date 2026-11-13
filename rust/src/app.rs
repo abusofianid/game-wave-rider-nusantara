@@ -645,15 +645,7 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
     if game.state == GameState::Menu {
         // Keep the original scene visible behind a translucent glass-like menu.
         // The previous opaque full-screen overlay hid the background image entirely.
-        paint_rect(
-            bounds,
-            window,
-            80.0,
-            112.0,
-            640.0,
-            376.0,
-            rgba(0xeaf8ffcc),
-        );
+        paint_rect(bounds, window, 80.0, 112.0, 640.0, 376.0, rgba(0xeaf8ffcc));
         // Subtle inner highlight and lower edge recreate the soft glass-panel frame.
         paint_rect(bounds, window, 82.0, 114.0, 636.0, 2.0, rgba(0xffffffff));
         paint_rect(bounds, window, 82.0, 484.0, 636.0, 2.0, rgba(0xb9e7f4cc));
