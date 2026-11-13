@@ -89,7 +89,7 @@ jobs:
             import -window "$window_id" artifacts/gpui-menu-smoke.png
             xdotool windowfocus --sync "$window_id"
             xdotool mousemove --window "$window_id" 400 300
-            xdotool key --clearmodifiers --window "$window_id" space
+            xdotool key --clearmodifiers space
             sleep 3
             import -window "$window_id" artifacts/gpui-gameplay-smoke.png
             if cmp -s artifacts/gpui-menu-smoke.png artifacts/gpui-gameplay-smoke.png; then
