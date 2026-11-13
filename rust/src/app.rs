@@ -7,7 +7,7 @@ use gpui::{
     App, Bounds, Context, Corners, FocusHandle, ImgResourceLoader, InteractiveElement,
     KeyDownEvent, KeyUpEvent, PathBuilder, Pixels, Point, Render, RenderImage, Resource,
     StatefulInteractiveElement, Window, WindowOptions, canvas, div, fill, point, prelude::*, px,
-    rgb, size,
+    rgb, rgba, size,
 };
 
 use crate::game::{
@@ -635,18 +635,20 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
     }
 
     if game.state == GameState::Menu {
+        // Keep the original scene visible behind a translucent glass-like menu.
+        // The previous opaque full-screen overlay hid the background image entirely.
         paint_rect(
             bounds,
             window,
-            0.0,
-            0.0,
-            GAME_WIDTH,
-            GAME_HEIGHT,
-            rgb(0x0a1c2e),
+            80.0,
+            112.0,
+            640.0,
+            376.0,
+            rgba(0xeaf8ffcc),
         );
-        paint_rect(bounds, window, 80.0, 140.0, 640.0, 320.0, rgb(0x12344a));
-        paint_rect(bounds, window, 110.0, 170.0, 580.0, 4.0, rgb(0xfbbf24));
-        paint_rect(bounds, window, 110.0, 420.0, 580.0, 4.0, rgb(0xfbbf24));
+        // Subtle inner highlight and lower edge recreate the soft glass-panel frame.
+        paint_rect(bounds, window, 82.0, 114.0, 636.0, 2.0, rgba(0xffffffff));
+        paint_rect(bounds, window, 82.0, 484.0, 636.0, 2.0, rgba(0xb9e7f4cc));
     } else if game.state == GameState::Paused || game.state == GameState::GameOver {
         paint_rect(
             bounds,
