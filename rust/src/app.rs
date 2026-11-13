@@ -770,7 +770,7 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
             PlayerFeedback::Collect => (582.0, 906.0),
             PlayerFeedback::Hit => (456.0, 812.0),
         };
-        let sprite_height = 70.0_f32.min(70.0);
+        let sprite_height = 70.0;
         let sprite_width = sprite_height * source_width / source_height;
         let sprite_x = game.player_x + (70.0 - sprite_width) / 2.0;
         let sprite_y = game.player_y + (70.0 - sprite_height) / 2.0;
