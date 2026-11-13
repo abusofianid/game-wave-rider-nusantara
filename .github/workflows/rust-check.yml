@@ -65,7 +65,13 @@ jobs:
             trap cleanup EXIT
             window_id=""
             for attempt in $(seq 1 30); do
-              window_id=$(xdotool search --onlyvisible --pid "$app_pid" 2>/dev/null | head -n 1 || true)
+              window_id=$(xdotool search --onlyvisible --name ".*" 2>/dev/null | while read -r candidate; do
+                candidate_pid=$(xdotool getwindowpid "$candidate" 2>/dev/null || true)
+                if [ "$candidate_pid" = "$app_pid" ]; then
+                  echo "$candidate"
+                  break
+                fi
+              done)
               if [ -n "$window_id" ] && grep -q "image ready: .*assets/images/bg.png" /tmp/wave-rider-app.log; then
                 break
               fi
@@ -78,7 +84,7 @@ jobs:
             done
             if [ -z "$window_id" ]; then
               cat /tmp/wave-rider-app.log
-              echo "Could not find the GPUI application window by process ID"
+              echo "Could not find a visible GPUI application window owned by the launched process"
               exit 1
             fi
             if ! grep -q "image ready: .*assets/images/bg.png" /tmp/wave-rider-app.log; then
