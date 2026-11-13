@@ -181,10 +181,7 @@ impl Render for GameApp {
             .child(Self::action_button(
                 "START / SPACE",
                 |this, cx| {
-                    if this.game.state == GameState::Menu || this.game.state == GameState::GameOver
-                    {
-                        this.game.start();
-                    }
+                    this.game.start_from_control();
                     cx.notify();
                 },
                 cx,
