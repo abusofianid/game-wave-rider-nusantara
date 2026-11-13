@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use async_io::Timer;
 use gpui::{
-    App, Bounds, Context, FocusHandle, InteractiveElement, KeyDownEvent, KeyUpEvent, PathBuilder,
+    App, Bounds, Context, FocusHandle, InteractiveElement, KeyDownEvent, KeyUpEvent, PathBuilder, StatefulInteractiveElement,
     Pixels, Point, Render, Window, WindowOptions, canvas, div, fill, point, prelude::*, px, rgb,
     size,
 };
