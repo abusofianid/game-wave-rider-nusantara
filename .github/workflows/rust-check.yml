@@ -88,9 +88,15 @@ jobs:
             fi
             import -window "$window_id" artifacts/gpui-menu-smoke.png
             xdotool windowactivate --sync "$window_id"
-            xdotool key --window "$window_id" space
-            sleep 2
+            xdotool key --clearmodifiers space
+            sleep 3
             import -window "$window_id" artifacts/gpui-gameplay-smoke.png
+            if cmp -s artifacts/gpui-menu-smoke.png artifacts/gpui-gameplay-smoke.png; then
+              echo "Gameplay screenshot is identical to the menu; Space did not start the game"
+              cat /tmp/wave-rider-app.log
+              exit 1
+            fi
+            echo "Gameplay screenshot differs from the menu after Space input"
             for screenshot in artifacts/gpui-menu-smoke.png artifacts/gpui-gameplay-smoke.png; do
               dimensions=$(identify -format "%wx%h" "$screenshot")
               colors=$(identify -format "%k" "$screenshot")
