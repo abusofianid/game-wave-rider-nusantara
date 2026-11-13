@@ -1,13 +1,28 @@
 mod app;
 mod game;
 
-use gpui::{App, AppContext, WindowOptions};
+use std::{borrow::Cow, fs};
+
+use gpui::{App, AppContext, AssetSource, SharedString, WindowOptions};
 use gpui_platform::application;
 
 use app::GameApp;
 
+struct Assets;
+
+impl AssetSource for Assets {
+    fn load(&self, path: &str) -> anyhow::Result<Option<Cow<'static, [u8]>>> {
+        fs::read(path).map(Cow::Owned).map(Some).map_err(Into::into)
+    }
+
+    fn list(&self, path: &str) -> anyhow::Result<Vec<SharedString>> {
+        Ok(fs::read_dir(path)?.filter_map(|entry| entry.ok())
+            .map(|entry| SharedString::from(entry.path().to_string_lossy().into_owned())).collect())
+    }
+}
+
 fn main() {
-    application().run(|cx: &mut App| {
+    application().with_assets(Assets).run(|cx: &mut App| {
         cx.open_window(WindowOptions::default(), |_, cx| cx.new(GameApp::new))
             .expect("failed to open Wave Rider Nusantara desktop window");
     });

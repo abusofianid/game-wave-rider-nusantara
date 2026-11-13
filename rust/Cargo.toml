@@ -1,11 +1,14 @@
-[package]
-name = "wave-rider-nusantara"
-version = "0.3.0"
-edition = "2024"
-description = "Wave Rider Nusantara native desktop endless runner, built with Rust and GPUI"
-license = "MIT OR Apache-2.0"
+mod app;
+mod game;
 
-[dependencies]
-gpui = { package = "gpui-unofficial", version = "1.27.0" }
-gpui_platform = { package = "gpui-platform-gpui-unofficial", version = "1.27.0" }
-async-io = "2.4"
+use gpui::{App, AppContext, WindowOptions};
+use gpui_platform::application;
+
+use app::GameApp;
+
+fn main() {
+    application().run(|cx: &mut App| {
+        cx.open_window(WindowOptions::default(), |_, cx| cx.new(GameApp::new))
+            .expect("failed to open Wave Rider Nusantara desktop window");
+    });
+}

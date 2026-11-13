@@ -1,10 +1,10 @@
-use std::time::Duration;
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use async_io::Timer;
 use gpui::{
-    App, Bounds, Context, FocusHandle, InteractiveElement, KeyDownEvent, KeyUpEvent, PathBuilder,
-    Pixels, Point, Render, StatefulInteractiveElement, Window, WindowOptions, canvas, div, fill,
-    point, prelude::*, px, rgb, size,
+    App, Bounds, Context, Corners, FocusHandle, ImgResourceLoader, InteractiveElement, KeyDownEvent,
+    KeyUpEvent, PathBuilder, Pixels, Point, Render, RenderImage, Resource, StatefulInteractiveElement,
+    Window, WindowOptions, canvas, div, fill, point, prelude::*, px, rgb, size,
 };
 
 use crate::game::{
@@ -12,6 +12,21 @@ use crate::game::{
 };
 
 const FRAME_TIME: Duration = Duration::from_millis(16);
+const BACKGROUND: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/bg.png");
+const GATOT_1: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/gatot_1.png");
+const GATOT_2: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/gatot_2.png");
+const GATOT_COLLECT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/gatot_collect.png");
+const GATOT_HIT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/gatot_hit.png");
+const BOMB: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/bomb.png");
+const BATIK_1: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/collect_1.png");
+const BATIK_2: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/collect_2.png");
+const BATIK_3: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/collect_3.png");
+const BATIK_4: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/collect_4.png");
+
+fn load_sprite(path: &str, window: &mut Window, cx: &mut App) -> Option<Arc<RenderImage>> {
+    let resource: Resource = PathBuf::from(path).into();
+    window.use_asset::<ImgResourceLoader>(&resource, cx).and_then(Result::ok)
+}
 
 pub struct GameApp {
     game: Game,
@@ -246,7 +261,20 @@ impl Render for GameApp {
                     .overflow_hidden()
                     .child(
                         canvas(
-                            move |_, _, _| game_snapshot,
+                            move |_, window, cx| {
+                                let mut snapshot = game_snapshot.clone();
+                                snapshot.background = load_sprite(BACKGROUND, window, cx);
+                                snapshot.gatot_1 = load_sprite(GATOT_1, window, cx);
+                                snapshot.gatot_2 = load_sprite(GATOT_2, window, cx);
+                                snapshot.gatot_collect = load_sprite(GATOT_COLLECT, window, cx);
+                                snapshot.gatot_hit = load_sprite(GATOT_HIT, window, cx);
+                                snapshot.bomb_sprite = load_sprite(BOMB, window, cx);
+                                snapshot.batik_1 = load_sprite(BATIK_1, window, cx);
+                                snapshot.batik_2 = load_sprite(BATIK_2, window, cx);
+                                snapshot.batik_3 = load_sprite(BATIK_3, window, cx);
+                                snapshot.batik_4 = load_sprite(BATIK_4, window, cx);
+                                snapshot
+                            },
                             move |bounds, snapshot, window, _| {
                                 paint_game_scene(bounds, &snapshot, window)
                             },
@@ -276,6 +304,16 @@ struct GameSnapshot {
     lives: u8,
     bombs: Vec<(f32, f32, f32, f32)>,
     collectibles: Vec<(f32, f32, f32, f32, CollectibleKind)>,
+    background: Option<Arc<RenderImage>>,
+    gatot_1: Option<Arc<RenderImage>>,
+    gatot_2: Option<Arc<RenderImage>>,
+    gatot_collect: Option<Arc<RenderImage>>,
+    gatot_hit: Option<Arc<RenderImage>>,
+    bomb_sprite: Option<Arc<RenderImage>>,
+    batik_1: Option<Arc<RenderImage>>,
+    batik_2: Option<Arc<RenderImage>>,
+    batik_3: Option<Arc<RenderImage>>,
+    batik_4: Option<Arc<RenderImage>>,
 }
 
 impl From<&Game> for GameSnapshot {
@@ -298,6 +336,16 @@ impl From<&Game> for GameSnapshot {
                 .iter()
                 .map(|item| (item.x, item.y, item.width, item.height, item.kind))
                 .collect(),
+            background: None,
+            gatot_1: None,
+            gatot_2: None,
+            gatot_collect: None,
+            gatot_hit: None,
+            bomb_sprite: None,
+            batik_1: None,
+            batik_2: None,
+            batik_3: None,
+            batik_4: None,
         }
     }
 }
@@ -386,27 +434,23 @@ fn paint_diamond(
     }
 }
 
-fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Window) {
-    paint_rect(
-        bounds,
-        window,
-        0.0,
-        0.0,
-        GAME_WIDTH,
-        GAME_HEIGHT,
-        rgb(0x0b3550),
-    );
-    paint_rect(bounds, window, 0.0, 0.0, GAME_WIDTH, 95.0, rgb(0x102b46));
-    paint_rect(bounds, window, 0.0, 500.0, GAME_WIDTH, 100.0, rgb(0x0a263e));
 
-    for index in 0..8 {
-        let x = index as f32 * 120.0 - 30.0;
-        paint_rect(bounds, window, x, 100.0, 2.0, 400.0, rgb(0x164a63));
+fn paint_sprite(
+    bounds: Bounds<Pixels>, window: &mut Window, x: f32, y: f32,
+    width: f32, height: f32, sprite: &Option<Arc<RenderImage>>,
+) {
+    if let Some(sprite) = sprite {
+        let origin = scaled_point(bounds, x, y);
+        let sx = f32::from(bounds.size.width) / GAME_WIDTH;
+        let sy = f32::from(bounds.size.height) / GAME_HEIGHT;
+        let image_bounds = Bounds { origin, size: size(px(width * sx), px(height * sy)) };
+        let _ = window.paint_image(image_bounds, image_bounds, Corners::default(), sprite.clone(), 0, false);
     }
-    for index in 0..7 {
-        let y = 130.0 + index as f32 * 60.0;
-        paint_rect(bounds, window, 0.0, y, GAME_WIDTH, 1.0, rgb(0x164a63));
-    }
+}
+
+fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Window) {
+    paint_rect(bounds, window, 0.0, 0.0, GAME_WIDTH, GAME_HEIGHT, rgb(0x0b3550));
+    paint_sprite(bounds, window, 0.0, 0.0, GAME_WIDTH, GAME_HEIGHT, &game.background);
 
     for (x, y, width, height) in &game.bombs {
         paint_circle(bounds, window, *x, *y, *width, rgb(0x1f2937));
@@ -429,97 +473,21 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
     }
 
     for (x, y, width, height, kind) in &game.collectibles {
-        let color = match kind {
-            CollectibleKind::Batik1 => rgb(0xfbbf24),
-            CollectibleKind::Batik2 => rgb(0x34d399),
-            CollectibleKind::Batik3 => rgb(0xf472b6),
-            CollectibleKind::Batik4 => rgb(0x60a5fa),
+        let sprite = match kind {
+            CollectibleKind::Batik1 => &game.batik_1,
+            CollectibleKind::Batik2 => &game.batik_2,
+            CollectibleKind::Batik3 => &game.batik_3,
+            CollectibleKind::Batik4 => &game.batik_4,
         };
-        paint_diamond(bounds, window, *x, *y, *width, *height, color);
-        paint_diamond(
-            bounds,
-            window,
-            *x + width * 0.22,
-            *y + height * 0.22,
-            *width * 0.56,
-            *height * 0.56,
-            rgb(0x7c2d12),
-        );
+        paint_sprite(bounds, window, *x, *y, *width, *height, sprite);
     }
 
-    let player_color = match game.player_feedback {
-        PlayerFeedback::Normal => {
-            if game.animation_frame == 0 {
-                rgb(0xf59e0b)
-            } else {
-                rgb(0xfbbf24)
-            }
-        }
-        PlayerFeedback::Hit => rgb(0xef4444),
-        PlayerFeedback::Collect => rgb(0x34d399),
+    let player_sprite = match game.player_feedback {
+        PlayerFeedback::Normal => if game.animation_frame == 0 { &game.gatot_1 } else { &game.gatot_2 },
+        PlayerFeedback::Hit => &game.gatot_hit,
+        PlayerFeedback::Collect => &game.gatot_collect,
     };
-    paint_circle(
-        bounds,
-        window,
-        game.player_x + 20.0,
-        game.player_y,
-        30.0,
-        rgb(0xfde68a),
-    );
-    paint_rect(
-        bounds,
-        window,
-        game.player_x + 10.0,
-        game.player_y + 25.0,
-        50.0,
-        38.0,
-        player_color,
-    );
-    paint_rect(
-        bounds,
-        window,
-        game.player_x + 5.0,
-        game.player_y + 35.0,
-        12.0,
-        28.0,
-        rgb(0x7c3aed),
-    );
-    paint_rect(
-        bounds,
-        window,
-        game.player_x + 48.0,
-        game.player_y + 35.0,
-        12.0,
-        28.0,
-        rgb(0x7c3aed),
-    );
-    paint_rect(
-        bounds,
-        window,
-        game.player_x + 15.0,
-        game.player_y + 58.0,
-        15.0,
-        12.0,
-        rgb(0x172554),
-    );
-    paint_rect(
-        bounds,
-        window,
-        game.player_x + 40.0,
-        game.player_y + 58.0,
-        15.0,
-        12.0,
-        rgb(0x172554),
-    );
-    paint_rect(
-        bounds,
-        window,
-        game.player_x + 25.0,
-        game.player_y + 30.0,
-        20.0,
-        5.0,
-        rgb(0x7f1d1d),
-    );
+    paint_sprite(bounds, window, game.player_x, game.player_y, 70.0, 70.0, player_sprite);
 
     if game.state == GameState::Menu {
         paint_rect(
