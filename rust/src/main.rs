@@ -12,7 +12,16 @@ struct Assets;
 
 impl AssetSource for Assets {
     fn load(&self, path: &str) -> anyhow::Result<Option<Cow<'static, [u8]>>> {
-        fs::read(path).map(Cow::Owned).map(Some).map_err(Into::into)
+        match fs::read(path) {
+            Ok(bytes) => {
+                eprintln!("Wave Rider Nusantara: loaded asset {path} ({} bytes)", bytes.len());
+                Ok(Some(Cow::Owned(bytes)))
+            }
+            Err(error) => {
+                eprintln!("Wave Rider Nusantara: asset read failed for {path}: {error}");
+                Err(error.into())
+            }
+        }
     }
 
     fn list(&self, path: &str) -> anyhow::Result<Vec<SharedString>> {
