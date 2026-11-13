@@ -9,8 +9,8 @@ use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink, Player};
 
 use async_io::Timer;
 use gpui::{
-    App, Bounds, Context, Corners, FocusHandle, ImageAssetLoader, InteractiveElement,
-    KeyDownEvent, KeyUpEvent, PathBuilder, Pixels, Point, Render, RenderImage, Resource,
+    App, Bounds, Context, Corners, FocusHandle, ImageAssetLoader, InteractiveElement, KeyDownEvent,
+    KeyUpEvent, PathBuilder, Pixels, Point, Render, RenderImage, Resource,
     StatefulInteractiveElement, Window, canvas, div, fill, point, prelude::*, px, rgb, rgba, size,
 };
 
