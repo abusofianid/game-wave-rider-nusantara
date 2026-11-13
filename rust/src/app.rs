@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use async_io::Timer;
 use gpui::{
-    App, Bounds, Context, KeyDownEvent, KeyUpEvent, PathBuilder, Pixels, Point, Render,
+    App, Bounds, Context, FocusHandle, KeyDownEvent, KeyUpEvent, PathBuilder, Pixels, Point, Render,
     Window, WindowOptions, canvas, div, fill, point, prelude::*, px, rgb, size,
 };
 
@@ -14,12 +14,14 @@ const FRAME_TIME: Duration = Duration::from_millis(16);
 
 pub struct GameApp {
     game: Game,
+    focus_handle: FocusHandle,
 }
 
 impl GameApp {
     pub fn new(cx: &mut Context<Self>) -> Self {
         let app = Self {
             game: Game::default(),
+            focus_handle: cx.focus_handle().tab_stop(true),
         };
         cx.spawn(async move |weak, cx| {
             loop {
@@ -186,6 +188,7 @@ impl Render for GameApp {
 
         div()
             .id("wave-rider-root")
+            .track_focus(&self.focus_handle)
             .flex()
             .flex_col()
             .items_center()
