@@ -212,13 +212,19 @@ impl Render for GameApp {
         };
         let state_text = match (self.game.language, self.game.state) {
             (Language::English, GameState::Menu) => "Choose a language, then press SPACE to start",
-            (Language::Indonesian, GameState::Menu) => "Silakan pilih bahasa, lalu tekan SPASI untuk mulai",
+            (Language::Indonesian, GameState::Menu) => {
+                "Silakan pilih bahasa, lalu tekan SPASI untuk mulai"
+            }
             (Language::English, GameState::Playing) => "PLAYING • P to pause • M to mute",
-            (Language::Indonesian, GameState::Playing) => "BERMAIN • P untuk jeda • M untuk bisukan",
+            (Language::Indonesian, GameState::Playing) => {
+                "BERMAIN • P untuk jeda • M untuk bisukan"
+            }
             (Language::English, GameState::Paused) => "PAUSED • Press P to resume",
             (Language::Indonesian, GameState::Paused) => "JEDA • Tekan P untuk melanjutkan",
             (Language::English, GameState::GameOver) => "GAME OVER • Press R to restart",
-            (Language::Indonesian, GameState::GameOver) => "PERMAINAN BERAKHIR • Tekan R untuk ulang",
+            (Language::Indonesian, GameState::GameOver) => {
+                "PERMAINAN BERAKHIR • Tekan R untuk ulang"
+            }
         };
 
         let language_controls = div()
@@ -300,9 +306,7 @@ impl Render for GameApp {
                         snapshot.batik_4 = load_sprite(BATIK_4, window, cx);
                         snapshot
                     },
-                    move |bounds, snapshot, window, _| {
-                        paint_game_scene(bounds, &snapshot, window)
-                    },
+                    move |bounds, snapshot, window, _| paint_game_scene(bounds, &snapshot, window),
                 )
                 .size_full(),
             );
@@ -331,21 +335,13 @@ impl Render for GameApp {
                                 .text_color(rgb(0x102a43))
                                 .child(title),
                         )
-                        .child(
-                            div()
-                                .text_sm()
-                                .text_color(rgb(0x24445c))
-                                .child(subtitle),
-                        )
-                        .child(
-                            div()
-                                .text_sm()
-                                .text_color(rgb(0x24445c))
-                                .child(match self.game.language {
-                                    Language::English => "Please select a language",
-                                    Language::Indonesian => "Silakan pilih bahasa",
-                                }),
-                        )
+                        .child(div().text_sm().text_color(rgb(0x24445c)).child(subtitle))
+                        .child(div().text_sm().text_color(rgb(0x24445c)).child(
+                            match self.game.language {
+                                Language::English => "Please select a language",
+                                Language::Indonesian => "Silakan pilih bahasa",
+                            },
+                        ))
                         .child(language_controls)
                         .child(menu_start),
                 )
@@ -355,7 +351,11 @@ impl Render for GameApp {
                         .top(px(14.))
                         .right(px(14.))
                         .child(Self::action_button(
-                            if self.game.muted { "SOUND OFF" } else { "SOUND ON" },
+                            if self.game.muted {
+                                "SOUND OFF"
+                            } else {
+                                "SOUND ON"
+                            },
                             |this, cx| {
                                 this.toggle_mute();
                                 cx.notify();
@@ -371,15 +371,14 @@ impl Render for GameApp {
                         .w_full()
                         .flex()
                         .justify_center()
-                        .child(
-                            div()
-                                .text_xs()
-                                .text_color(rgb(0x102a43))
-                                .child(match self.game.language {
-                                    Language::English => "ARROW KEYS / WASD to move  •  SPACE to start",
-                                    Language::Indonesian => "TOMBOL PANAH / WASD untuk bergerak  •  SPASI untuk mulai",
-                                }),
-                        ),
+                        .child(div().text_xs().text_color(rgb(0x102a43)).child(
+                            match self.game.language {
+                                Language::English => "ARROW KEYS / WASD to move  •  SPACE to start",
+                                Language::Indonesian => {
+                                    "TOMBOL PANAH / WASD untuk bergerak  •  SPASI untuk mulai"
+                                }
+                            },
+                        )),
                 );
         } else {
             scene = scene
