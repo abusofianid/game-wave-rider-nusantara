@@ -1,6 +1,6 @@
 use std::{
     collections::HashSet,
-    fs::File,
+    io::Cursor,
     path::PathBuf,
     sync::{Arc, Mutex, OnceLock},
     time::Duration,
@@ -20,20 +20,17 @@ use crate::game::{
 };
 
 const FRAME_TIME: Duration = Duration::from_millis(16);
-const BACKGROUND: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/bg.png");
-const GATOT_1: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/gatot_1.png");
-const GATOT_2: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/gatot_2.png");
-const GATOT_COLLECT: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/assets/images/gatot_collect.png"
-);
-const GATOT_HIT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/gatot_hit.png");
-const BOMB: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/bomb.png");
-const BATIK_1: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/collect_1.png");
-const BATIK_2: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/collect_2.png");
-const BATIK_3: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/collect_3.png");
-const BATIK_4: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/collect_4.png");
-const BACKGROUND_MUSIC: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/audio/bg-sound.ogg");
+const BACKGROUND: &str = "assets/images/bg.png";
+const GATOT_1: &str = "assets/images/gatot_1.png";
+const GATOT_2: &str = "assets/images/gatot_2.png";
+const GATOT_COLLECT: &str = "assets/images/gatot_collect.png";
+const GATOT_HIT: &str = "assets/images/gatot_hit.png";
+const BOMB: &str = "assets/images/bomb.png";
+const BATIK_1: &str = "assets/images/collect_1.png";
+const BATIK_2: &str = "assets/images/collect_2.png";
+const BATIK_3: &str = "assets/images/collect_3.png";
+const BATIK_4: &str = "assets/images/collect_4.png";
+const BACKGROUND_MUSIC: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/audio/bg-sound.ogg"));
 
 struct AudioController {
     _output: MixerDeviceSink,
@@ -49,15 +46,8 @@ impl AudioController {
                 return None;
             }
         };
-        let file = match File::open(BACKGROUND_MUSIC) {
+        let music = match Decoder::new_looped(Cursor::new(BACKGROUND_MUSIC)) {
             Ok(file) => file,
-            Err(error) => {
-                eprintln!("Wave Rider Nusantara: background music could not be opened: {error}");
-                return None;
-            }
-        };
-        let music = match Decoder::new_looped(file) {
-            Ok(music) => music,
             Err(error) => {
                 eprintln!("Wave Rider Nusantara: background music could not be decoded: {error}");
                 return None;
