@@ -300,7 +300,7 @@ impl Render for GameApp {
             .relative()
             .w_full()
             .max_w(px(800.))
-            .h(px(600.))
+            .aspect_ratio(4.0 / 3.0)
             .rounded_xl()
             .overflow_hidden()
             .child(
@@ -329,34 +329,44 @@ impl Render for GameApp {
                 .child(
                     div()
                         .absolute()
-                        .top(px(112.))
-                        .left(px(80.))
-                        .w(px(640.))
-                        .h(px(376.))
-                        .rounded_xl()
-                        .bg(rgba(0xeaf8ffdd))
+                        .top_0()
+                        .right_0()
+                        .bottom_0()
+                        .left_0()
                         .flex()
-                        .flex_col()
                         .items_center()
                         .justify_center()
-                        .gap_4()
-                        .px_8()
+                        .p_4()
                         .child(
                             div()
-                                .text_2xl()
-                                .font_weight(gpui::FontWeight::BOLD)
-                                .text_color(rgb(0x102a43))
-                                .child(title),
-                        )
-                        .child(div().text_sm().text_color(rgb(0x24445c)).child(subtitle))
-                        .child(div().text_sm().text_color(rgb(0x24445c)).child(
-                            match self.game.language {
-                                Language::English => "Please select a language",
-                                Language::Indonesian => "Silakan pilih bahasa",
-                            },
-                        ))
-                        .child(language_controls)
-                        .child(menu_start),
+                                .w_full()
+                                .max_w(px(640.))
+                                .rounded_xl()
+                                .bg(rgba(0xeaf8ffdd))
+                                .flex()
+                                .flex_col()
+                                .items_center()
+                                .justify_center()
+                                .gap_4()
+                                .px_8()
+                                .py_8()
+                                .child(
+                                    div()
+                                        .text_2xl()
+                                        .font_weight(gpui::FontWeight::BOLD)
+                                        .text_color(rgb(0x102a43))
+                                        .child(title),
+                                )
+                                .child(div().text_sm().text_color(rgb(0x24445c)).child(subtitle))
+                                .child(div().text_sm().text_color(rgb(0x24445c)).child(
+                                    match self.game.language {
+                                        Language::English => "Please select a language",
+                                        Language::Indonesian => "Silakan pilih bahasa",
+                                    },
+                                ))
+                                .child(language_controls)
+                                .child(menu_start),
+                        ),
                 )
                 .child(
                     div()
@@ -447,19 +457,30 @@ impl Render for GameApp {
                 scene = scene.child(
                     div()
                         .absolute()
-                        .top(px(205.))
-                        .left(px(130.))
-                        .w(px(540.))
-                        .h(px(190.))
-                        .rounded_xl()
-                        .bg(rgba(0xeaf8ffed))
+                        .top_0()
+                        .right_0()
+                        .bottom_0()
+                        .left_0()
                         .flex()
                         .items_center()
                         .justify_center()
-                        .text_color(rgb(0x102a43))
-                        .text_xl()
-                        .font_weight(gpui::FontWeight::BOLD)
-                        .child(state_text),
+                        .p_4()
+                        .child(
+                            div()
+                                .w_full()
+                                .max_w(px(540.))
+                                .rounded_xl()
+                                .bg(rgba(0xeaf8ffed))
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .px_6()
+                                .py_8()
+                                .text_color(rgb(0x102a43))
+                                .text_xl()
+                                .font_weight(gpui::FontWeight::BOLD)
+                                .child(state_text),
+                        ),
                 );
             }
         }
