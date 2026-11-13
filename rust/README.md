@@ -36,11 +36,12 @@ cargo build --release
 - Temporary hit/collect feedback and a two-frame run-state animation counter.
 - English and Indonesian UI language choice.
 - Space starts, P pauses/resumes, R restarts after game-over, M toggles the mute preference.
-- GPUI canvas scene painted with vector primitives.
+- GPUI canvas scene using the original Python PNG background, Gatotkaca animation/feedback sprites, four Batik collectibles, and bomb sprite.
+- Vector primitives retained for the HUD and state overlays.
 
 ## Current port scope
 
-The core game model and scene loop are newly implemented from the Python source. The current rendering uses vector-drawn approximations rather than the original PNG sprites. The Python source assets remain in the sibling `python/assets/` directory and are not yet wired into the GPUI renderer. The mute toggle is UI state only; background audio playback has not yet been ported. These are remaining polish tasks for visual/audio parity.
+The core game model and scene loop are newly implemented from the Python source. The GPUI renderer now loads the original PNG assets from `rust/assets/images/` through GPUI's asset system. Background audio playback has not yet been ported; the mute toggle currently preserves the UI preference only. Audio integration and visual comparison against the Python version remain follow-up tasks.
 
 ## CI
 
