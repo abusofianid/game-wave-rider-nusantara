@@ -125,7 +125,7 @@ impl Default for Game {
     fn default() -> Self {
         Self {
             state: GameState::Menu,
-            language: Language::Indonesian,
+            language: Language::English,
             player: Player::default(),
             bombs: Vec::new(),
             collectibles: Vec::new(),
