@@ -1,17 +1,11 @@
 [package]
 name = "wave-rider-nusantara"
-version = "0.1.0"
-edition = "2021"
-description = "A Rust port of Wave Rider Nusantara using Macroquad"
+version = "0.3.0"
+edition = "2024"
+description = "Wave Rider Nusantara native desktop endless runner, built with Rust and GPUI"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-futures = "0.3"
-macroquad = "0.4.14"
-image = { version = "0.24.9", default-features = false, features = ["png", "tga", "webp"] }
-
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-strip = true
+gpui = { package = "gpui-unofficial", version = "1.27.0" }
+gpui_platform = { package = "gpui-platform-gpui-unofficial", version = "1.27.0" }
+async-io = "2.4"
