@@ -62,7 +62,17 @@ jobs:
               wait "$wm_pid" 2>/dev/null || true
             }
             trap cleanup EXIT
-            sleep 8
+            for attempt in $(seq 1 30); do
+              if grep -q "image ready: .*assets/images/bg.png" /tmp/wave-rider-app.log; then
+                break
+              fi
+              if ! kill -0 "$app_pid" 2>/dev/null; then
+                cat /tmp/wave-rider-app.log
+                echo "GPUI process exited before the background image loaded"
+                exit 1
+              fi
+              sleep 1
+            done
             if ! kill -0 "$app_pid" 2>/dev/null; then
               cat /tmp/wave-rider-app.log
               echo "GPUI process exited before the startup check completed"
@@ -74,14 +84,14 @@ jobs:
             echo "Captured virtual desktop: $dimensions; distinct colors: $colors"
             test "$dimensions" = "1280x1024"
             test "$colors" -gt 8
-            if ! grep -q "loaded asset .*assets/images/bg.png" /tmp/wave-rider-app.log; then
-              echo "The original background image was not loaded by GPUI"
+            if ! grep -q "image ready: .*assets/images/bg.png" /tmp/wave-rider-app.log; then
+              echo "The original background image did not finish loading within 30 seconds"
               cat /tmp/wave-rider-app.log
               exit 1
             fi
             for asset in gatot_1.png bomb.png collect_1.png; do
-              if ! grep -q "loaded asset .*assets/images/$asset" /tmp/wave-rider-app.log; then
-                echo "Required game sprite was not loaded: $asset"
+              if ! grep -q "image ready: .*assets/images/$asset" /tmp/wave-rider-app.log; then
+                echo "Required game sprite did not finish loading: $asset"
                 cat /tmp/wave-rider-app.log
                 exit 1
               fi
