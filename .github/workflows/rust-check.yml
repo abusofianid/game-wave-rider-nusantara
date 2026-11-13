@@ -86,6 +86,20 @@ jobs:
               echo "The original background image did not finish loading within 30 seconds"
               exit 1
             fi
+            for asset in gatot_1.png gatot_2.png gatot_collect.png gatot_hit.png bomb.png collect_1.png collect_2.png collect_3.png collect_4.png; do
+              for attempt in $(seq 1 30); do
+                if grep -q "image ready: .*assets/images/$asset" /tmp/wave-rider-app.log; then
+                  break
+                fi
+                sleep 1
+              done
+              if ! grep -q "image ready: .*assets/images/$asset" /tmp/wave-rider-app.log; then
+                echo "Required game sprite did not finish loading within 30 seconds: $asset"
+                cat /tmp/wave-rider-app.log
+                exit 1
+              fi
+            done
+            sleep 1
             import -window "$window_id" artifacts/gpui-menu-smoke.png
             xdotool windowfocus --sync "$window_id"
             xdotool mousemove --window "$window_id" 400 300
