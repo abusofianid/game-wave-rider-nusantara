@@ -74,6 +74,18 @@ jobs:
             echo "Captured virtual desktop: $dimensions; distinct colors: $colors"
             test "$dimensions" = "1280x1024"
             test "$colors" -gt 8
+            if ! grep -q "loaded asset .*assets/images/bg.png" /tmp/wave-rider-app.log; then
+              echo "The original background image was not loaded by GPUI"
+              cat /tmp/wave-rider-app.log
+              exit 1
+            fi
+            for asset in gatot_1.png bomb.png collect_1.png; do
+              if ! grep -q "loaded asset .*assets/images/$asset" /tmp/wave-rider-app.log; then
+                echo "Required game sprite was not loaded: $asset"
+                cat /tmp/wave-rider-app.log
+                exit 1
+              fi
+            done
           '
       - name: Upload GPUI smoke-test screenshot and logs
         if: always()
