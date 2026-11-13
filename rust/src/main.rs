@@ -1,7 +1,7 @@
 mod app;
 mod game;
 
-use gpui::{App, WindowOptions};
+use gpui::{App, AppContext, WindowOptions};
 use gpui_platform::application;
 
 use app::GameApp;
