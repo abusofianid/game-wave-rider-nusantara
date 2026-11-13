@@ -813,18 +813,4 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
         );
     }
 
-    // HUD is rendered as vector bars so it remains crisp at any scale.
-    let score_meter = (game.score as f32 / 10.0).min(50.0) * 8.0;
-    paint_rect(bounds, window, 20.0, 20.0, 160.0, 8.0, rgb(0x1e293b));
-    paint_rect(bounds, window, 20.0, 20.0, score_meter, 8.0, rgb(0xfbbf24));
-    for life in 0..game.lives {
-        paint_circle(
-            bounds,
-            window,
-            730.0 - life as f32 * 24.0,
-            20.0,
-            16.0,
-            rgb(0xef4444),
-        );
-    }
 }
