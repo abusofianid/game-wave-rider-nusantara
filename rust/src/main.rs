@@ -14,7 +14,10 @@ impl AssetSource for Assets {
     fn load(&self, path: &str) -> anyhow::Result<Option<Cow<'static, [u8]>>> {
         match fs::read(path) {
             Ok(bytes) => {
-                eprintln!("Wave Rider Nusantara: loaded asset {path} ({} bytes)", bytes.len());
+                eprintln!(
+                    "Wave Rider Nusantara: loaded asset {path} ({} bytes)",
+                    bytes.len()
+                );
                 Ok(Some(Cow::Owned(bytes)))
             }
             Err(error) => {
