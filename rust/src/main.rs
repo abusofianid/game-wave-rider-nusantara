@@ -16,8 +16,10 @@ impl AssetSource for Assets {
     }
 
     fn list(&self, path: &str) -> anyhow::Result<Vec<SharedString>> {
-        Ok(fs::read_dir(path)?.filter_map(|entry| entry.ok())
-            .map(|entry| SharedString::from(entry.path().to_string_lossy().into_owned())).collect())
+        Ok(fs::read_dir(path)?
+            .filter_map(|entry| entry.ok())
+            .map(|entry| SharedString::from(entry.path().to_string_lossy().into_owned()))
+            .collect())
     }
 }
 

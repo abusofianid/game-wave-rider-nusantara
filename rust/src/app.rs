@@ -2,9 +2,10 @@ use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use async_io::Timer;
 use gpui::{
-    App, Bounds, Context, Corners, FocusHandle, ImgResourceLoader, InteractiveElement, KeyDownEvent,
-    KeyUpEvent, PathBuilder, Pixels, Point, Render, RenderImage, Resource, StatefulInteractiveElement,
-    Window, WindowOptions, canvas, div, fill, point, prelude::*, px, rgb, size,
+    App, Bounds, Context, Corners, FocusHandle, ImgResourceLoader, InteractiveElement,
+    KeyDownEvent, KeyUpEvent, PathBuilder, Pixels, Point, Render, RenderImage, Resource,
+    StatefulInteractiveElement, Window, WindowOptions, canvas, div, fill, point, prelude::*, px,
+    rgb, size,
 };
 
 use crate::game::{
@@ -15,7 +16,10 @@ const FRAME_TIME: Duration = Duration::from_millis(16);
 const BACKGROUND: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/bg.png");
 const GATOT_1: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/gatot_1.png");
 const GATOT_2: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/gatot_2.png");
-const GATOT_COLLECT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/gatot_collect.png");
+const GATOT_COLLECT: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/assets/images/gatot_collect.png"
+);
 const GATOT_HIT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/gatot_hit.png");
 const BOMB: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/bomb.png");
 const BATIK_1: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/collect_1.png");
@@ -25,7 +29,9 @@ const BATIK_4: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/images/collec
 
 fn load_sprite(path: &str, window: &mut Window, cx: &mut App) -> Option<Arc<RenderImage>> {
     let resource: Resource = PathBuf::from(path).into();
-    window.use_asset::<ImgResourceLoader>(&resource, cx).and_then(Result::ok)
+    window
+        .use_asset::<ImgResourceLoader>(&resource, cx)
+        .and_then(Result::ok)
 }
 
 pub struct GameApp {
@@ -434,23 +440,53 @@ fn paint_diamond(
     }
 }
 
-
 fn paint_sprite(
-    bounds: Bounds<Pixels>, window: &mut Window, x: f32, y: f32,
-    width: f32, height: f32, sprite: &Option<Arc<RenderImage>>,
+    bounds: Bounds<Pixels>,
+    window: &mut Window,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    sprite: &Option<Arc<RenderImage>>,
 ) {
     if let Some(sprite) = sprite {
         let origin = scaled_point(bounds, x, y);
         let sx = f32::from(bounds.size.width) / GAME_WIDTH;
         let sy = f32::from(bounds.size.height) / GAME_HEIGHT;
-        let image_bounds = Bounds { origin, size: size(px(width * sx), px(height * sy)) };
-        let _ = window.paint_image(image_bounds, image_bounds, Corners::default(), sprite.clone(), 0, false);
+        let image_bounds = Bounds {
+            origin,
+            size: size(px(width * sx), px(height * sy)),
+        };
+        let _ = window.paint_image(
+            image_bounds,
+            image_bounds,
+            Corners::default(),
+            sprite.clone(),
+            0,
+            false,
+        );
     }
 }
 
 fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Window) {
-    paint_rect(bounds, window, 0.0, 0.0, GAME_WIDTH, GAME_HEIGHT, rgb(0x0b3550));
-    paint_sprite(bounds, window, 0.0, 0.0, GAME_WIDTH, GAME_HEIGHT, &game.background);
+    paint_rect(
+        bounds,
+        window,
+        0.0,
+        0.0,
+        GAME_WIDTH,
+        GAME_HEIGHT,
+        rgb(0x0b3550),
+    );
+    paint_sprite(
+        bounds,
+        window,
+        0.0,
+        0.0,
+        GAME_WIDTH,
+        GAME_HEIGHT,
+        &game.background,
+    );
 
     for (x, y, width, height) in &game.bombs {
         paint_circle(bounds, window, *x, *y, *width, rgb(0x1f2937));
@@ -483,11 +519,25 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
     }
 
     let player_sprite = match game.player_feedback {
-        PlayerFeedback::Normal => if game.animation_frame == 0 { &game.gatot_1 } else { &game.gatot_2 },
+        PlayerFeedback::Normal => {
+            if game.animation_frame == 0 {
+                &game.gatot_1
+            } else {
+                &game.gatot_2
+            }
+        }
         PlayerFeedback::Hit => &game.gatot_hit,
         PlayerFeedback::Collect => &game.gatot_collect,
     };
-    paint_sprite(bounds, window, game.player_x, game.player_y, 70.0, 70.0, player_sprite);
+    paint_sprite(
+        bounds,
+        window,
+        game.player_x,
+        game.player_y,
+        70.0,
+        70.0,
+        player_sprite,
+    );
 
     if game.state == GameState::Menu {
         paint_rect(
