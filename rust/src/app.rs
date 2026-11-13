@@ -2,8 +2,9 @@ use std::time::Duration;
 
 use async_io::Timer;
 use gpui::{
-    App, Bounds, Context, FocusHandle, KeyDownEvent, KeyUpEvent, PathBuilder, Pixels, Point,
-    Render, Window, WindowOptions, canvas, div, fill, point, prelude::*, px, rgb, size,
+    App, Bounds, Context, FocusHandle, InteractiveElement, KeyDownEvent, KeyUpEvent, PathBuilder,
+    Pixels, Point, Render, Window, WindowOptions, canvas, div, fill, point, prelude::*, px, rgb,
+    size,
 };
 
 use crate::game::{
@@ -321,13 +322,13 @@ fn paint_rect(
     let origin = scaled_point(bounds, x, y);
     let scale_x = f32::from(bounds.size.width) / GAME_WIDTH;
     let scale_y = f32::from(bounds.size.height) / GAME_HEIGHT;
-    window.paint_quad(
-        PaintQuad::new(Bounds {
+    window.paint_quad(fill(
+        Bounds {
             origin,
             size: size(px(width * scale_x), px(height * scale_y)),
-        })
-        .background(color),
-    );
+        },
+        color,
+    ));
 }
 
 fn paint_circle(
