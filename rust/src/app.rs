@@ -835,7 +835,6 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
     }
 }
 
-
 #[cfg(test)]
 mod audio_tests {
     use super::*;
@@ -854,8 +853,14 @@ mod audio_tests {
 
         let decoder = Decoder::new(Cursor::new(BACKGROUND_MUSIC))
             .expect("bundled OGG soundtrack must decode");
-        assert!(decoder.channels() > 0, "soundtrack must have audio channels");
-        assert!(decoder.sample_rate() > 0, "soundtrack must have a sample rate");
+        assert!(
+            decoder.channels() > 0,
+            "soundtrack must have audio channels"
+        );
+        assert!(
+            decoder.sample_rate() > 0,
+            "soundtrack must have a sample rate"
+        );
         assert!(
             decoder.take(4096).count() > 0,
             "soundtrack must yield decoded audio samples"
