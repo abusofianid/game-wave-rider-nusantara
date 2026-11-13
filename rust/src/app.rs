@@ -12,8 +12,7 @@ use async_io::Timer;
 use gpui::{
     App, Bounds, Context, Corners, FocusHandle, ImgResourceLoader, InteractiveElement,
     KeyDownEvent, KeyUpEvent, PathBuilder, Pixels, Point, Render, RenderImage, Resource,
-    StatefulInteractiveElement, Window, canvas, div, fill, point, prelude::*, px,
-    rgb, rgba, size,
+    StatefulInteractiveElement, Window, canvas, div, fill, point, prelude::*, px, rgb, rgba, size,
 };
 
 use crate::game::{
