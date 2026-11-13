@@ -76,9 +76,17 @@ impl AudioController {
 
 fn load_sprite(path: &str, window: &mut Window, cx: &mut App) -> Option<Arc<RenderImage>> {
     let resource: Resource = PathBuf::from(path).into();
-    window
-        .use_asset::<ImgResourceLoader>(&resource, cx)
-        .and_then(Result::ok)
+    match window.use_asset::<ImgResourceLoader>(&resource, cx) {
+        Some(Ok(image)) => Some(image),
+        Some(Err(error)) => {
+            eprintln!("Wave Rider Nusantara: failed to load image asset {path}: {error}");
+            None
+        }
+        None => {
+            eprintln!("Wave Rider Nusantara: image asset is not available yet: {path}");
+            None
+        }
+    }
 }
 
 pub struct GameApp {
