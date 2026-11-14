@@ -90,7 +90,7 @@ fn main() {
         cx.text_system()
             .add_fonts(vec![Cow::Borrowed(include_bytes!(concat!(
                 env!("CARGO_MANIFEST_DIR"),
-                "/../python/assets/fonts/OpenSans-SemiBold.ttf"
+                "/assets/fonts/OpenSans-SemiBold.ttf"
             )))])
             .expect("failed to register Open Sans font");
 
