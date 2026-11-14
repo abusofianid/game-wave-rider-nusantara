@@ -2,7 +2,7 @@
 
 ![React](https://img.shields.io/badge/React-web-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Rust](https://img.shields.io/badge/Rust-native%20desktop-orange?style=for-the-badge&logo=rust&logoColor=white)
-![Python](https://img.shields.io/badge/Python-desktop-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-native%20desktop%20%7C%20PyInstaller-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT%20%26%20Apache%202.0-blue?style=for-the-badge)
 
 **Wave Rider Nusantara** is an arcade-style endless runner inspired by the culture and visual identity of the Indonesian archipelago. Collect Batik patterns, avoid bombs, and help Gatotkaca survive for as long as possible.
@@ -13,7 +13,9 @@ This repository contains three implementations:
 | --- | --- | --- |
 | [Web](./react/) | Browser-based game | React, JavaScript |
 | [Rust](./rust/) | Native desktop application | Rust, GPUI, Rodio |
-| [Python](./python/) | Desktop implementation | Python, Pyglet |
+| [Python](./python/) | Native desktop application, distributable as a standalone executable | Python, Pyglet, PyInstaller |
+
+Both the Rust and Python editions are desktop applications. The Rust edition is built as a native executable with GPUI, while the Python edition can be packaged for desktop distribution with PyInstaller. PyInstaller bundles the Python interpreter and the required dependencies with the application; it does not compile Python source code into machine code.
 
 The web version is deployed at [waveridernusantara.web.id](https://waveridernusantara.web.id/).
 
@@ -93,9 +95,11 @@ npm run dev
 
 Follow the terminal output to open the local development URL.
 
-## Run the Python version
+## Run the Python desktop version
 
-The Python implementation uses Pyglet. Its entry point is `python/main.py`, and dependencies are listed in `python/requirements.txt`.
+The Python edition is a desktop game built with Pyglet. You can run it from source with Python or package it as a standalone desktop executable using PyInstaller. Its entry point is `python/main.py`, and dependencies are listed in `python/requirements.txt`.
+
+### Run from source
 
 Create a virtual environment from the repository root:
 
@@ -103,7 +107,7 @@ Create a virtual environment from the repository root:
 
 ```powershell
 py -m venv .venv
-.venv\Scripts\Activate.ps1
+.venv\\Scripts\\Activate.ps1
 ```
 
 **Linux / macOS:**
@@ -121,7 +125,21 @@ python -m pip install -r python/requirements.txt
 python python/main.py
 ```
 
-Run from the repository root so relative asset paths resolve correctly. For packaging details, see [Python README](./python/README.md).
+Run from the repository root so relative asset paths resolve correctly.
+
+### Package with PyInstaller
+
+PyInstaller can bundle the Python runtime, installed dependencies, and game resources into a distributable application. For example, from the `python/` directory on Windows:
+
+```powershell
+py -m pip install -r requirements.txt
+py -m pip install pyinstaller
+py -m PyInstaller --name WaveRiderNusantara --onefile --windowed --add-data "assets;assets" main.py
+```
+
+The generated Windows executable is placed in `python/dist/WaveRiderNusantara.exe`. Build the package on the target operating system: PyInstaller is not a cross-compiler, so a Windows executable must be built on Windows, a macOS app on macOS, and a Linux executable on Linux.
+
+For the complete Python implementation and packaging notes, see the [Python README](./python/README.md).
 
 ## License
 
