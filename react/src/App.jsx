@@ -50,6 +50,7 @@ const PLAYER_BASE_SPEED = 300;
 const PLAYER_TARGET_SIZE = 70;
 const STATE_DURATION = 0.3;
 const MIN_SPAWN_DISTANCE = 120;
+const rect = canvas.getBoundingClientRect();
 
 export default function WaveRiderGame() {
   const windowSize = useGameWindow();
