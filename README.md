@@ -1,9 +1,9 @@
 # Wave Rider Nusantara
 
-![React](https://img.shields.io/badge/React-web-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![React](https://img.shields.io/badge/Javascript-web-yellow?style=for-the-badge&logo=javascript&logoColor=white)
 ![Rust](https://img.shields.io/badge/Rust-native%20desktop-orange?style=for-the-badge&logo=rust&logoColor=white)
-![Python](https://img.shields.io/badge/Python-native%20desktop%20%7C%20PyInstaller-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT%20%26%20Apache%202.0-blue?style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-native%20desktop-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT%20%26%20Apache%202.0-20232A?style=for-the-badge)
 
 **Wave Rider Nusantara** is an arcade-style endless runner inspired by the culture and visual identity of the Indonesian archipelago. Collect Batik patterns, avoid bombs, and help Gatotkaca survive for as long as possible.
 
@@ -11,7 +11,7 @@ This repository contains three implementations:
 
 | Version | Description | Technology |
 | --- | --- | --- |
-| [Web](./react/) | Browser-based game | React, JavaScript |
+| [Javascript](./react/) | Browser-based game | JavaScript, React |
 | [Rust](./rust/) | Native desktop application | Rust, GPUI, Rodio |
 | [Python](./python/) | Native desktop application, distributable as a standalone executable | Python, Pyglet, PyInstaller |
 
