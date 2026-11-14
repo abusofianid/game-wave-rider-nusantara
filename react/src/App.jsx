@@ -96,7 +96,7 @@ export default function WaveRiderGame() {
 
     window.addEventListener('resize', updatePausePosition);
     return () => window.removeEventListener('resize', updatePausePosition);
-  }, [windowSize.scale]);
+  }, [windowSize.scale, imagesLoaded]);
 
   // ==========================================================
   // ## 🏞️ OPTIMIZED ASSET LOADING
