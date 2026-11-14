@@ -3,7 +3,7 @@
 ![React](https://img.shields.io/badge/Javascript-web-yellow?style=for-the-badge&logo=javascript&logoColor=white)
 ![Rust](https://img.shields.io/badge/Rust-native%20desktop-orange?style=for-the-badge&logo=rust&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-native%20desktop-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT%20%26%20Apache%202.0-20232A?style=for-the-badge)
+![License](https://img.shields.io/badge/License-Apache%202.0%20%26%20MIT%20-20232A?style=for-the-badge&logo=github&logoColor=white)
 
 **Wave Rider Nusantara** is an arcade-style endless runner inspired by the culture and visual identity of the Indonesian archipelago. Collect Batik patterns, avoid bombs, and help Gatotkaca survive for as long as possible.
 
