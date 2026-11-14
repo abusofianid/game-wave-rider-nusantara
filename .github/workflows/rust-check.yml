@@ -1,11 +1,6 @@
-name: Rust checks and WebAssembly build
+name: Native Rust GPUI checks
 
 on:
-  push:
-    branches: [rust]
-    paths:
-      - "rust/**"
-      - ".github/workflows/rust-check.yml"
   pull_request:
     paths:
       - "rust/**"
@@ -16,41 +11,178 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  native:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: wasm32-unknown-unknown
-      - name: Install audio conversion tools
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - name: Prepare compressed soundtrack
-        run: bash rust/scripts/prepare-audio.sh
-      - name: Check desktop target
-        run: cargo check --manifest-path rust/Cargo.toml
-      - name: Run unit tests
-        run: cargo test --manifest-path rust/Cargo.toml
-      - name: Check WebAssembly target
-        run: cargo check --manifest-path rust/Cargo.toml --target wasm32-unknown-unknown
-      - name: Build optimized WebAssembly
-        run: cargo build --manifest-path rust/Cargo.toml --release --target wasm32-unknown-unknown
-      - name: Assemble static WebAssembly site
-        shell: bash
+          components: rustfmt
+      - name: Install GPUI Linux dependencies
         run: |
-          set -euo pipefail
-          cd rust
-          mkdir -p web
-          cp target/wasm32-unknown-unknown/release/wave-rider-nusantara.wasm web/wave_rider_nusantara.wasm
-          curl --proto '=https' --tlsv1.2 -fsSL https://not-fl3.github.io/miniquad-samples/mq_js_bundle.js -o web/mq_js_bundle.js
-          sed 's#./web/#./#g' index.html > web/index.html
-          mkdir -p web/assets/audio
-          cp -r assets/images assets/fonts web/assets/
-          cp assets/audio/bg-sound.ogg web/assets/audio/
-      - name: Upload WebAssembly site artifact
+          sudo apt-get update
+          sudo apt-get install --yes \
+            pkg-config \
+            libfontconfig1-dev \
+            libasound2-dev \
+            libx11-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            libwayland-dev \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xvfb \
+            xauth \
+            openbox \
+            imagemagick \
+            xdotool \
+            libvulkan1 \
+            mesa-vulkan-drivers
+      - name: Verify formatting
+        run: cargo fmt --manifest-path rust/Cargo.toml --all -- --check
+      - name: Check native application
+        run: cargo check --manifest-path rust/Cargo.toml
+      - name: Run gameplay unit tests
+        run: cargo test --manifest-path rust/Cargo.toml
+      - name: Build release desktop app
+        run: cargo build --manifest-path rust/Cargo.toml --release
+      - name: Smoke test GPUI startup and capture screenshot
+        run: |
+          mkdir -p artifacts
+          xvfb-run -a bash -euo pipefail -c '
+            export LIBGL_ALWAYS_SOFTWARE=1
+            openbox >/tmp/wave-rider-openbox.log 2>&1 &
+            wm_pid=$!
+            ./rust/target/release/wave-rider-nusantara >/tmp/wave-rider-app.log 2>&1 &
+            app_pid=$!
+            cleanup() {
+              kill "$app_pid" "$wm_pid" 2>/dev/null || true
+              wait "$app_pid" 2>/dev/null || true
+              wait "$wm_pid" 2>/dev/null || true
+            }
+            trap cleanup EXIT
+            window_id=""
+            for attempt in $(seq 1 30); do
+              window_id=$(xdotool search --onlyvisible --pid "$app_pid" --name ".*" 2>/dev/null | head -n 1 || true)
+              if [ -n "$window_id" ] && grep -q "image ready: .*assets/images/bg.png" /tmp/wave-rider-app.log; then
+                break
+              fi
+              if ! kill -0 "$app_pid" 2>/dev/null; then
+                cat /tmp/wave-rider-app.log
+                echo "GPUI process exited before its window and background image became ready"
+                exit 1
+              fi
+              sleep 1
+            done
+            if [ -z "$window_id" ]; then
+              cat /tmp/wave-rider-app.log
+              echo "Could not find a visible GPUI application window owned by the launched process"
+              exit 1
+            fi
+            if ! grep -q "image ready: .*assets/images/bg.png" /tmp/wave-rider-app.log; then
+              cat /tmp/wave-rider-app.log
+              echo "The original background image did not finish loading within 30 seconds"
+              exit 1
+            fi
+            for asset in gatot_1.png gatot_2.png gatot_collect.png gatot_hit.png bomb.png collect_1.png collect_2.png collect_3.png collect_4.png; do
+              for attempt in $(seq 1 30); do
+                if grep -q "image ready: .*assets/images/$asset" /tmp/wave-rider-app.log; then
+                  break
+                fi
+                sleep 1
+              done
+              if ! grep -q "image ready: .*assets/images/$asset" /tmp/wave-rider-app.log; then
+                echo "Required game sprite did not finish loading within 30 seconds: $asset"
+                cat /tmp/wave-rider-app.log
+                exit 1
+              fi
+            done
+            sleep 1
+            import -window "$window_id" artifacts/gpui-menu-smoke.png
+            xdotool windowfocus --sync "$window_id"
+            xdotool mousemove --window "$window_id" 400 300
+            xdotool key --clearmodifiers space
+            sleep 3
+            import -window "$window_id" artifacts/gpui-gameplay-smoke.png
+            if cmp -s artifacts/gpui-menu-smoke.png artifacts/gpui-gameplay-smoke.png; then
+              echo "Gameplay screenshot is identical to the menu; Space did not start the game"
+              cat /tmp/wave-rider-app.log
+              exit 1
+            fi
+            echo "Gameplay screenshot differs from the menu after Space input"
+
+            # Verify real desktop keyboard input changes the rendered scene.
+            xdotool keydown Right
+            sleep 0.5
+            xdotool keyup Right
+            sleep 0.3
+            import -window "$window_id" artifacts/gpui-movement-smoke.png
+            if compare -metric AE artifacts/gpui-gameplay-smoke.png artifacts/gpui-movement-smoke.png null: 2>/tmp/gpui-movement-diff.txt; then
+              echo "Arrow-key movement did not change the rendered gameplay"
+              exit 1
+            fi
+            echo "Arrow-key movement changed the rendered gameplay"
+
+            # Pause should freeze the scene; resume should let it advance again.
+            xdotool key p
+            sleep 0.3
+            import -window "$window_id" artifacts/gpui-paused-smoke.png
+            sleep 1
+            import -window "$window_id" artifacts/gpui-paused-stable-smoke.png
+            if ! compare -metric AE artifacts/gpui-paused-smoke.png artifacts/gpui-paused-stable-smoke.png null: 2>/tmp/gpui-pause-diff.txt; then
+              echo "Paused gameplay continued changing instead of freezing"
+              exit 1
+            fi
+            xdotool key p
+            sleep 0.5
+            import -window "$window_id" artifacts/gpui-resumed-smoke.png
+            if compare -metric AE artifacts/gpui-paused-smoke.png artifacts/gpui-resumed-smoke.png null: 2>/tmp/gpui-resume-diff.txt; then
+              echo "Gameplay did not visibly resume after pressing P"
+              exit 1
+            fi
+            echo "Pause froze the scene and resume advanced gameplay"
+
+            # The mute shortcut must update the visible sound state.
+            xdotool key m
+            sleep 0.2
+            import -window "$window_id" artifacts/gpui-muted-smoke.png
+            if compare -metric AE artifacts/gpui-resumed-smoke.png artifacts/gpui-muted-smoke.png null: 2>/tmp/gpui-mute-diff.txt; then
+              echo "Mute shortcut did not update the visible sound control"
+              exit 1
+            fi
+            xdotool key m
+            sleep 0.2
+            echo "Mute shortcut changed the visible sound control"
+            for screenshot in artifacts/gpui-menu-smoke.png artifacts/gpui-gameplay-smoke.png; do
+              dimensions=$(identify -format "%wx%h" "$screenshot")
+              colors=$(identify -format "%k" "$screenshot")
+              echo "Captured $screenshot: $dimensions; distinct colors: $colors"
+              test "$colors" -gt 8
+            done
+            for asset in gatot_1.png bomb.png collect_1.png; do
+              if ! grep -q "image ready: .*assets/images/$asset" /tmp/wave-rider-app.log; then
+                echo "Required game sprite did not finish loading: $asset"
+                cat /tmp/wave-rider-app.log
+                exit 1
+              fi
+            done
+          '
+      - name: Upload GPUI smoke-test screenshots and logs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: wave-rider-nusantara-wasm
-          path: rust/web/
-          if-no-files-found: error
-          retention-days: 14
+          name: gpui-desktop-smoke
+          path: |
+            artifacts/gpui-menu-smoke.png
+            artifacts/gpui-gameplay-smoke.png
+            artifacts/gpui-movement-smoke.png
+            artifacts/gpui-paused-smoke.png
+            artifacts/gpui-paused-stable-smoke.png
+            artifacts/gpui-resumed-smoke.png
+            artifacts/gpui-muted-smoke.png
+            /tmp/wave-rider-app.log
+            /tmp/wave-rider-openbox.log
+          if-no-files-found: warn
+          retention-days: 7

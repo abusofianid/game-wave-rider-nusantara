@@ -1,0 +1,107 @@
+name: Native Rust desktop builds
+
+on:
+  pull_request:
+    paths:
+      - "rust/**"
+      - ".github/workflows/rust-check.yml"
+      - ".github/workflows/rust-release.yml"
+  push:
+    tags:
+      - "rust-v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: wave-rider-nusantara-linux-x86_64
+          - os: windows-latest
+            artifact: wave-rider-nusantara-windows-x86_64
+          - os: macos-latest
+            artifact: wave-rider-nusantara-macos
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux GPUI dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            pkg-config \
+            libfontconfig1-dev \
+            libasound2-dev \
+            libx11-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            libwayland-dev \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev
+
+      - name: Verify formatting
+        run: cargo fmt --manifest-path rust/Cargo.toml --all -- --check
+
+      - name: Build optimized desktop binary
+        run: cargo build --manifest-path rust/Cargo.toml --release
+
+      - name: Package Linux and macOS binaries
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mkdir -p dist/package
+          cp rust/target/release/wave-rider-nusantara dist/package/
+          cp README.md LICENSE-MIT LICENSE-APACHE dist/package/
+          tar -czf "dist/${{ matrix.artifact }}.tar.gz" -C dist package
+
+      - name: Package Windows binary
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist/package | Out-Null
+          Copy-Item rust/target/release/wave-rider-nusantara.exe dist/package/
+          Copy-Item README.md, LICENSE-MIT, LICENSE-APACHE dist/package/
+          Compress-Archive -Path dist/package/* -DestinationPath "dist/${{ matrix.artifact }}.zip"
+
+      - name: Upload platform package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.artifact }}.*
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/rust-v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download platform packages
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          pattern: wave-rider-nusantara-*
+          merge-multiple: true
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true
