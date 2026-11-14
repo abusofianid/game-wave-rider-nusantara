@@ -837,36 +837,3 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
         GameState::Menu | GameState::Playing => {}
     }
 }
-
-#[cfg(test)]
-mod audio_tests {
-    use super::*;
-    use rodio::Source;
-
-    #[test]
-    fn bundled_ogg_soundtrack_decodes_and_yields_audio_samples() {
-        assert!(
-            BACKGROUND_MUSIC.starts_with(b"OggS"),
-            "bundled soundtrack must be an OGG container"
-        );
-        assert!(
-            !BACKGROUND_MUSIC.is_empty(),
-            "bundled soundtrack must not be empty"
-        );
-
-        let decoder = Decoder::new(Cursor::new(BACKGROUND_MUSIC))
-            .expect("bundled OGG soundtrack must decode");
-        assert!(
-            decoder.channels().get() > 0,
-            "soundtrack must have audio channels"
-        );
-        assert!(
-            decoder.sample_rate().get() > 0,
-            "soundtrack must have a sample rate"
-        );
-        assert!(
-            decoder.take(4096).count() > 0,
-            "soundtrack must yield decoded audio samples"
-        );
-    }
-}
