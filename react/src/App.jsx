@@ -50,7 +50,6 @@ const PLAYER_BASE_SPEED = 300;
 const PLAYER_TARGET_SIZE = 70;
 const STATE_DURATION = 0.3;
 const MIN_SPAWN_DISTANCE = 120;
-const rect = canvas.getBoundingClientRect();
 
 export default function WaveRiderGame() {
   const windowSize = useGameWindow();
@@ -62,6 +61,7 @@ export default function WaveRiderGame() {
   const [muted, setMuted] = useState(false);
 
   const canvasRef = useRef(null);
+  const [pausePosition, setPausePosition] = useState(null);
   const requestRef = useRef(0);
   const lastTimeRef = useRef(0);
   const audioRef = useRef(null);
@@ -78,6 +78,25 @@ export default function WaveRiderGame() {
   const keysPressed = useRef({});
   const speedMultiplier = useRef(1.0);
   const imagesRef = useRef({ collect: [] });
+
+  useEffect(() => {
+    const updatePausePosition = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const rect = canvas.getBoundingClientRect();
+
+      setPausePosition({
+        left: rect.left + rect.width / 2,
+        top: Math.max(8, rect.top - 54),
+      });
+    };
+
+    updatePausePosition();
+
+    window.addEventListener('resize', updatePausePosition);
+    return () => window.removeEventListener('resize', updatePausePosition);
+  }, [windowSize.scale]);
 
   // ==========================================================
   // ## 🏞️ OPTIMIZED ASSET LOADING
@@ -567,7 +586,17 @@ export default function WaveRiderGame() {
           <button
             onClick={(e) => { togglePause(); e.currentTarget.blur(); }}
             style={{
-              ...touchStyle, position: 'fixed', left: `${rect.left + rect.width / 2}px`, top: `${rect.bottom + 10}px`, transform: 'translateX(-50%)', height: '44px', margin: 0, padding: '0 18px', fontSize: '14px', zIndex: 1000
+              ...touchStyle,
+              position: 'fixed',
+              left: pausePosition ? `${pausePosition.left}px` : '50%',
+              top: pausePosition ? `${pausePosition.top}px` : '8px',
+              transform: 'translateX(-50%)',
+              height: '44px',
+              margin: 0,
+              padding: '0 18px',
+              fontSize: '14px',
+              zIndex: 1000,
+              visibility: pausePosition ? 'visible' : 'hidden',
             }}
           >
             {gameState === 'PLAYING' ? TEXTS.pause_btn[language] : TEXTS.resume_btn[language]}
