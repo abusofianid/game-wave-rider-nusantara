@@ -51,115 +51,6 @@ const PLAYER_TARGET_SIZE = 70;
 const STATE_DURATION = 0.3;
 const MIN_SPAWN_DISTANCE = 120;
 
-// Helper SVG Fallbacks to guarantee images render immediately
-const createSvgUrl = (svg) => `data:image/svg+xml;utf8,${encodeURIComponent(svg.trim())}`;
-
-const FALLBACK_ASSETS = {
-  'gatot-1': createSvgUrl(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-      <defs>
-        <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FFE066"/><stop offset="100%" stop-color="#D4AF37"/></linearGradient>
-        <linearGradient id="w1" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#FF3366"/><stop offset="100%" stop-color="#800020"/></linearGradient>
-      </defs>
-      <path d="M 30,50 Q 5,20 15,65 Q 35,55 30,50 Z" fill="url(#w1)" stroke="#FFE066" stroke-width="2"/>
-      <path d="M 70,50 Q 95,20 85,65 Q 65,55 70,50 Z" fill="url(#w1)" stroke="#FFE066" stroke-width="2"/>
-      <path d="M 35,40 L 65,40 L 60,80 L 40,80 Z" fill="url(#g1)" stroke="#8B4513" stroke-width="2"/>
-      <path d="M 40,25 L 50,5 L 60,25 L 50,20 Z" fill="#FFE066" stroke="#D4AF37" stroke-width="2"/>
-      <circle cx="50" cy="15" r="4" fill="#FF0000"/>
-      <circle cx="50" cy="30" r="12" fill="#FFD1A4"/>
-      <path d="M 44,32 Q 50,36 56,32" stroke="#000" stroke-width="2" fill="none"/>
-      <circle cx="45" cy="28" r="2" fill="#000"/>
-      <circle cx="55" cy="28" r="2" fill="#000"/>
-      <ellipse cx="50" cy="86" rx="25" ry="8" fill="#00E5FF" opacity="0.8"/>
-    </svg>
-  `),
-  'gatot-2': createSvgUrl(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-      <defs>
-        <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FFE066"/><stop offset="100%" stop-color="#D4AF37"/></linearGradient>
-        <linearGradient id="w2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#FF3366"/><stop offset="100%" stop-color="#800020"/></linearGradient>
-      </defs>
-      <path d="M 30,45 Q 0,10 10,55 Q 35,50 30,45 Z" fill="url(#w2)" stroke="#FFE066" stroke-width="2"/>
-      <path d="M 70,45 Q 100,10 90,55 Q 65,50 70,45 Z" fill="url(#w2)" stroke="#FFE066" stroke-width="2"/>
-      <path d="M 35,40 L 65,40 L 60,80 L 40,80 Z" fill="url(#g2)" stroke="#8B4513" stroke-width="2"/>
-      <path d="M 40,25 L 50,5 L 60,25 L 50,20 Z" fill="#FFE066" stroke="#D4AF37" stroke-width="2"/>
-      <circle cx="50" cy="15" r="4" fill="#FF0000"/>
-      <circle cx="50" cy="30" r="12" fill="#FFD1A4"/>
-      <path d="M 44,32 Q 50,36 56,32" stroke="#000" stroke-width="2" fill="none"/>
-      <circle cx="45" cy="28" r="2" fill="#000"/>
-      <circle cx="55" cy="28" r="2" fill="#000"/>
-      <ellipse cx="50" cy="86" rx="30" ry="10" fill="#00E5FF" opacity="0.9"/>
-    </svg>
-  `),
-  'gatot-hit': createSvgUrl(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-      <circle cx="50" cy="50" r="45" fill="#FF0000" opacity="0.5"/>
-      <circle cx="50" cy="50" r="30" fill="#FF4444"/>
-      <text x="50" y="62" font-size="32" font-weight="bold" text-anchor="middle" fill="#FFF">💥</text>
-    </svg>
-  `),
-  'gatot-collect': createSvgUrl(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-      <circle cx="50" cy="50" r="45" fill="#FFD700" opacity="0.6"/>
-      <polygon points="50,10 62,38 90,38 68,56 76,85 50,68 24,85 32,56 10,38 38,38" fill="#FFF200" stroke="#FF8C00" stroke-width="2"/>
-    </svg>
-  `),
-  'bomb': createSvgUrl(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-      <circle cx="50" cy="55" r="35" fill="#1A1A1A" stroke="#444" stroke-width="3"/>
-      <rect x="42" y="12" width="16" height="12" rx="3" fill="#888"/>
-      <path d="M 50,12 Q 60,2 75,10" fill="none" stroke="#D2691E" stroke-width="4"/>
-      <circle cx="75" cy="10" r="6" fill="#FF4500"/>
-      <circle cx="75" cy="10" r="3" fill="#FFFF00"/>
-      <text x="50" y="66" font-size="24" text-anchor="middle" fill="#FF3333">💣</text>
-    </svg>
-  `),
-  'bg': createSvgUrl(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
-      <defs>
-        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0F2027"/><stop offset="50%" stop-color="#203A43"/><stop offset="100%" stop-color="#2C5364"/></linearGradient>
-        <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#005C97"/><stop offset="100%" stop-color="#363795"/></linearGradient>
-      </defs>
-      <rect width="800" height="380" fill="url(#sky)"/>
-      <circle cx="680" cy="120" r="60" fill="#FFE066" opacity="0.8"/>
-      <rect y="380" width="800" height="220" fill="url(#sea)"/>
-      <path d="M 0,390 Q 200,370 400,390 T 800,390 L 800,600 L 0,600 Z" fill="#0077BE" opacity="0.4"/>
-      <path d="M 0,420 Q 200,440 400,420 T 800,420 L 800,600 L 0,600 Z" fill="#00E5FF" opacity="0.2"/>
-    </svg>
-  `),
-  'collect-0': createSvgUrl(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-      <rect width="100" height="100" rx="15" fill="#1E3A8A"/>
-      <path d="M 20,50 Q 35,25 50,50 T 80,50 Q 65,75 50,50 T 20,50 Z" fill="#3B82F6" stroke="#93C5FD" stroke-width="3"/>
-      <path d="M 30,50 Q 40,35 50,50 T 70,50" fill="none" stroke="#FFFFFF" stroke-width="2"/>
-    </svg>
-  `),
-  'collect-1': createSvgUrl(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-      <rect width="100" height="100" rx="15" fill="#7C2D12"/>
-      <path d="M 10,90 L 90,10 M 25,95 L 95,25 M 5,75 L 75,5" stroke="#FDBA74" stroke-width="8" stroke-linecap="round"/>
-      <path d="M 10,90 L 90,10" stroke="#FFF" stroke-width="2" stroke-dasharray="4,4"/>
-    </svg>
-  `),
-  'collect-2': createSvgUrl(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-      <rect width="100" height="100" rx="15" fill="#065F46"/>
-      <ellipse cx="50" cy="25" rx="15" ry="22" fill="#A7F3D0" stroke="#047857" stroke-width="2"/>
-      <ellipse cx="50" cy="75" rx="15" ry="22" fill="#A7F3D0" stroke="#047857" stroke-width="2"/>
-      <ellipse cx="25" cy="50" rx="22" ry="15" fill="#A7F3D0" stroke="#047857" stroke-width="2"/>
-      <ellipse cx="75" cy="50" rx="22" ry="15" fill="#A7F3D0" stroke="#047857" stroke-width="2"/>
-      <circle cx="50" cy="50" r="8" fill="#FDE047"/>
-    </svg>
-  `),
-  'collect-3': createSvgUrl(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-      <rect width="100" height="100" rx="15" fill="#581C87"/>
-      <polygon points="50,15 85,50 50,85 15,50" fill="#E9D5FF" stroke="#C084FC" stroke-width="3"/>
-      <circle cx="50" cy="50" r="15" fill="#F43F5E"/>
-    </svg>
-  `)
-};
-
 export default function WaveRiderGame() {
   const windowSize = useGameWindow();
   const [gameState, setGameState] = useState('MENU');
@@ -217,37 +108,20 @@ export default function WaveRiderGame() {
 
     const loadSingleImage = (key, src) => {
       const img = new Image();
-      img.src = src;
+
       img.onload = () => {
         if (key.startsWith('collect-')) {
-          const idx = parseInt(key.split('-')[1]);
+          const idx = Number(key.split('-')[1]);
           imagesRef.current.collect[idx] = img;
         } else {
           imagesRef.current[key] = img;
         }
         checkFinished();
       };
-      img.onerror = () => {
-        // Fallback to embedded SVG data URI if image file is missing
-        const fallbackSrc = FALLBACK_ASSETS[key];
-        if (fallbackSrc) {
-          const fbImg = new Image();
-          fbImg.src = fallbackSrc;
-          fbImg.onload = () => {
-            if (key.startsWith('collect-')) {
-              const idx = parseInt(key.split('-')[1]);
-              imagesRef.current.collect[idx] = fbImg;
-            } else {
-              imagesRef.current[key] = fbImg;
-            }
-            checkFinished();
-          };
-          // Without this, a failed fallback leaves the loading screen stuck forever
-          fbImg.onerror = checkFinished;
-        } else {
-          checkFinished();
-        }
-      };
+
+      // Count failed requests too, so the loading screen cannot get stuck.
+      img.onerror = checkFinished;
+      img.src = src;
     };
 
     Object.entries(imageSources).forEach(([key, src]) => {
