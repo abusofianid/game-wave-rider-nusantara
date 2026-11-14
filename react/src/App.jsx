@@ -566,7 +566,7 @@ export default function WaveRiderGame() {
           <button
             onClick={(e) => { togglePause(); e.currentTarget.blur(); }}
             style={{
-              ...touchStyle, position: 'fixed', top: '8px', left: '50%', transform: 'translateX(-50%)',
+              ...touchStyle, position: 'fixed', bottom: 'calc((100vh - 600px * var(--game-scale)) / 2 + 15px)', left: '50%', transform: 'translateX(-50%)',
               height: '44px', margin: 0, padding: '0 18px', fontSize: '14px', zIndex: 1000
             }}
           >
