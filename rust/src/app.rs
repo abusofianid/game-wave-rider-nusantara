@@ -832,15 +832,7 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
                 GAME_HEIGHT,
                 rgba(0x091827cc),
             );
-            paint_rect(
-                bounds,
-                window,
-                130.0,
-                180.0,
-                540.0,
-                240.0,
-                rgb(0x7f1d1d),
-            );
+            paint_rect(bounds, window, 130.0, 180.0, 540.0, 240.0, rgb(0x7f1d1d));
         }
         GameState::Menu | GameState::Playing => {}
     }
