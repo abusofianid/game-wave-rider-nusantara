@@ -112,6 +112,49 @@ jobs:
               exit 1
             fi
             echo "Gameplay screenshot differs from the menu after Space input"
+
+            # Verify real desktop keyboard input changes the rendered scene.
+            xdotool keydown Right
+            sleep 0.5
+            xdotool keyup Right
+            sleep 0.3
+            import -window "$window_id" artifacts/gpui-movement-smoke.png
+            if compare -metric AE artifacts/gpui-gameplay-smoke.png artifacts/gpui-movement-smoke.png null: 2>/tmp/gpui-movement-diff.txt; then
+              echo "Arrow-key movement did not change the rendered gameplay"
+              exit 1
+            fi
+            echo "Arrow-key movement changed the rendered gameplay"
+
+            # Pause should freeze the scene; resume should let it advance again.
+            xdotool key p
+            sleep 0.3
+            import -window "$window_id" artifacts/gpui-paused-smoke.png
+            sleep 1
+            import -window "$window_id" artifacts/gpui-paused-stable-smoke.png
+            if ! compare -metric AE artifacts/gpui-paused-smoke.png artifacts/gpui-paused-stable-smoke.png null: 2>/tmp/gpui-pause-diff.txt; then
+              echo "Paused gameplay continued changing instead of freezing"
+              exit 1
+            fi
+            xdotool key p
+            sleep 0.5
+            import -window "$window_id" artifacts/gpui-resumed-smoke.png
+            if compare -metric AE artifacts/gpui-paused-smoke.png artifacts/gpui-resumed-smoke.png null: 2>/tmp/gpui-resume-diff.txt; then
+              echo "Gameplay did not visibly resume after pressing P"
+              exit 1
+            fi
+            echo "Pause froze the scene and resume advanced gameplay"
+
+            # The mute shortcut must update the visible sound state.
+            xdotool key m
+            sleep 0.2
+            import -window "$window_id" artifacts/gpui-muted-smoke.png
+            if compare -metric AE artifacts/gpui-resumed-smoke.png artifacts/gpui-muted-smoke.png null: 2>/tmp/gpui-mute-diff.txt; then
+              echo "Mute shortcut did not update the visible sound control"
+              exit 1
+            fi
+            xdotool key m
+            sleep 0.2
+            echo "Mute shortcut changed the visible sound control"
             for screenshot in artifacts/gpui-menu-smoke.png artifacts/gpui-gameplay-smoke.png; do
               dimensions=$(identify -format "%wx%h" "$screenshot")
               colors=$(identify -format "%k" "$screenshot")
@@ -134,6 +177,11 @@ jobs:
           path: |
             artifacts/gpui-menu-smoke.png
             artifacts/gpui-gameplay-smoke.png
+            artifacts/gpui-movement-smoke.png
+            artifacts/gpui-paused-smoke.png
+            artifacts/gpui-paused-stable-smoke.png
+            artifacts/gpui-resumed-smoke.png
+            artifacts/gpui-muted-smoke.png
             /tmp/wave-rider-app.log
             /tmp/wave-rider-openbox.log
           if-no-files-found: warn
