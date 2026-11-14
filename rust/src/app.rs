@@ -484,7 +484,7 @@ impl Render for GameApp {
                                 .w_full()
                                 .max_w(px(540.))
                                 .rounded_xl()
-                                .bg(rgba(0xeaf8ffed))
+                                .bg(rgba(0xeaf8ffbb))
                                 .flex()
                                 .items_center()
                                 .justify_center()
@@ -506,9 +506,9 @@ impl Render for GameApp {
             .flex_col()
             .items_center()
             .justify_center()
-            .p_4()
+            .p_0()
             .size_full()
-            .bg(rgb(0x071a2e))
+            .bg(rgb(0x000000))
             .text_color(rgb(0xf8fafc))
             .font_family("Open Sans")
             .on_key_down(cx.listener(Self::handle_key_down))
@@ -809,29 +809,40 @@ fn paint_game_scene(bounds: Bounds<Pixels>, game: &GameSnapshot, window: &mut Wi
         );
     }
 
-    if game.state == GameState::Paused || game.state == GameState::GameOver {
-        paint_rect(
-            bounds,
-            window,
-            0.0,
-            0.0,
-            GAME_WIDTH,
-            GAME_HEIGHT,
-            rgb(0x091827),
-        );
-        paint_rect(
-            bounds,
-            window,
-            130.0,
-            180.0,
-            540.0,
-            240.0,
-            if game.state == GameState::Paused {
-                rgb(0x1e3a5f)
-            } else {
-                rgb(0x7f1d1d)
-            },
-        );
+    match game.state {
+        GameState::Paused => {
+            // Dim the scene without hiding the gameplay behind opaque panels.
+            paint_rect(
+                bounds,
+                window,
+                0.0,
+                0.0,
+                GAME_WIDTH,
+                GAME_HEIGHT,
+                rgba(0x09182773),
+            );
+        }
+        GameState::GameOver => {
+            paint_rect(
+                bounds,
+                window,
+                0.0,
+                0.0,
+                GAME_WIDTH,
+                GAME_HEIGHT,
+                rgba(0x091827cc),
+            );
+            paint_rect(
+                bounds,
+                window,
+                130.0,
+                180.0,
+                540.0,
+                240.0,
+                rgb(0x7f1d1d),
+            );
+        }
+        GameState::Menu | GameState::Playing => {}
     }
 }
 
