@@ -7,11 +7,15 @@
 
 **Wave Rider Nusantara** is an arcade-style endless runner inspired by the culture and visual identity of the Indonesian archipelago. Collect Batik patterns, avoid bombs, and help Gatotkaca survive for as long as possible.
 
+>This project is featured in the following awesome lists:  
+>✨ [Awesome Open Source Games](https://github.com/michelpereira/awesome-open-source-games#arcade)  
+>✨ [Vibe Arcade](https://github.com/yldm-tech/awesome-vibe-games)
+
 This repository contains three implementations:
 
 | Version | Description | Technology |
 | --- | --- | --- |
-| [Javascript](./react/) | Browser-based game | JavaScript, React |
+| [Javascript](./react/) | Browser-based game | JavaScript, React, Vite |
 | [Rust](./rust/) | Native desktop application | Rust, GPUI, Rodio |
 | [Python](./python/) | Native desktop application, distributable as a standalone executable | Python, Pyglet, PyInstaller |
 
